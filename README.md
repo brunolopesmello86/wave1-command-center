@@ -29,7 +29,7 @@ browser ── GET /api/sync?since=N  (every 4 s)  ──▶  api/sync.js ──
 
 ```
 vercel env pull .env.local     # fetch DATABASE_URL from the linked project
-npm run dev                    # http://localhost:3000
+vercel dev                     # http://localhost:3000
 ```
 
 ## Deploy

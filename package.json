@@ -5,7 +5,7 @@
   "type": "module",
   "description": "OwnIT! Digital Products Wave 1 command center — static app + Vercel functions + Neon Postgres",
   "scripts": {
-    "dev": "vercel dev",
+    "start": "echo use: vercel dev",
     "db:init": "node db/init.js"
   },
   "dependencies": {

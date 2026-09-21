@@ -209,6 +209,12 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 .note.good{border-left-color:var(--green);background:var(--green-soft)}
 .note strong{color:var(--ink)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── sign-in ────────────────────────────── */
+.auth{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:16px;overflow:auto}
+.auth-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow-lift);padding:26px 26px 22px}
+.auth-err{font-size:12.5px;color:var(--rose);background:var(--rose-soft);border-radius:7px;padding:7px 10px}
 </style>
 <style>
 /* ── kanban ─────────────────────────────── */
@@ -379,6 +385,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
       <span class="pill" id="weekPill"><span class="dot"></span><span id="weekTxt">Week —</span></span>
       <span class="pill" id="ragPill"><span class="dot"></span><span id="ragTxt">Status —</span></span>
       <span class="pill" id="syncPill"><span class="dot"></span><span id="syncTxt">Local</span></span>
+      <span class="pill" id="userPill" hidden title="Signed in — manage your account under Data &amp; setup"><span class="dot"></span><span id="userTxt"></span></span>
     </div>
   </div>
 </header>
@@ -409,6 +416,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
   <section id="panel-data" role="tabpanel" aria-labelledby="tab-data" hidden></section>
 </main>
 
+<div class="auth noprint" id="auth" hidden></div>
 <div class="scrim noprint" id="scrim"></div>
 <aside class="drawer noprint" id="drawer" role="dialog" aria-modal="true" aria-label="Item detail">
   <header>
@@ -593,7 +601,7 @@ const Store = {
   mode: 'memory', db: null, timers: {},
   /* api mode: change cursor, write queue, and the keys with unflushed writes */
   cursor: 0, queue: new Map(), pending: new Set(), flushT: null, inflight: null,
-  pollT: null, polling: false, key: '', online: true, apiError: '', dirtyPaint: false,
+  pollT: null, polling: false, online: true, apiError: '', dirtyPaint: false,
 
   async init() {
     let db = null;
@@ -612,23 +620,22 @@ const Store = {
   /* — project database, through /api/sync — */
   headers() {
     const h = { 'Content-Type': 'application/json' };
-    if (this.key) h['x-app-key'] = this.key;
+    if (Auth.token) h['Authorization'] = 'Bearer ' + Auth.token;
     return h;
   },
   async initApi() {
     if (!/^https?:$/.test(location.protocol)) return null;      // a file:// copy has no API
-    try { this.key = localStorage.getItem('cc.apikey') || ''; } catch (_) {}
     let r = null;
-    for (let attempt = 0; attempt < 4; attempt++) {
+    for (;;) {
       try { r = await fetch('/api/sync?since=0', { headers: this.headers(), cache: 'no-store' }); }
       catch (_) { this.apiError = 'the server could not be reached'; return null; }
       if (r.status === 404) return null;                          // not a hosted copy
-      if (r.status !== 401) break;
-      const k = prompt(attempt ? 'That key was not accepted. Try again:' : 'This command center is protected. Enter the access key:');
-      if (k === null) { this.apiError = 'no access key given'; return null; }
-      this.key = k.trim();
-      try { localStorage.setItem('cc.apikey', this.key); } catch (_) {}
+      if (r.status !== 401 && r.status !== 403) break;
+      let why = '';
+      if (Auth.token) { try { why = (await r.json()).error || ''; } catch (_) {} Auth.token = ''; }
+      await Auth.show(why && r.status === 403 ? why : '');
     }
+    if (!Auth.user) { try { Auth.user = (await Auth.call('me')).user; Auth.paintPill(); } catch (_) {} }
     if (!r || !r.ok) {
       let msg = 'HTTP ' + (r ? r.status : '?');
       try { msg = (await r.json()).error || msg; } catch (_) {}
@@ -693,7 +700,7 @@ const Store = {
     this.polling = true;
     try {
       const r = await fetch('/api/sync?since=' + this.cursor, { headers: this.headers(), cache: 'no-store' });
-      if (r.status === 401) { this.setOnline(false, 'access key no longer accepted — reload the page'); return; }
+      if (r.status === 401 || r.status === 403) { Auth.signOut(); return; }
       if (!r.ok) { this.setOnline(false); return; }
       const body = await r.json();
       this.setOnline(true);
@@ -879,7 +886,7 @@ function canon(v) {
 
 /* ── the update log — what the executive view reads ─────────────── */
 function logUpdate(what, detail, kind = 'n', ref = '') {
-  const u = { id: uid('U'), ts: Date.now(), what, detail, kind, ref, who: D.meta.whoAmI || '' };
+  const u = { id: uid('U'), ts: Date.now(), what, detail, kind, ref, who: (Auth.user && Auth.user.name) || D.meta.whoAmI || '' };
   D.updates.push(u);
   Store.save('updates', u);
   return u;
@@ -1131,7 +1138,7 @@ function renderExec() {
             <div class="fitem"><div class="frail"><span class="fdot ${esc(u.kind)}"></span></div>
               <div class="fbody">
                 <div class="fw">${esc(u.what)}</div>
-                <div class="fm">${esc(fmtTs(u.ts))}${u.ref ? ' · ' + esc(u.ref) : ''}</div>
+                <div class="fm">${esc(fmtTs(u.ts))}${u.ref ? ' · ' + esc(u.ref) : ''}${u.who ? ' · ' + esc(u.who) : ''}</div>
                 ${u.detail ? `<div class="ftx">${esc(u.detail)}</div>` : ''}
               </div></div>`).join('')}</div>`
             : '<p class="src" style="margin:0">Nothing logged yet. Status changes, decisions and results recorded in the other views appear here and feed the Friday report.</p>'}</div>
@@ -2176,8 +2183,8 @@ function renderData() {
           <div><span class="lbl">Engagement lead</span><input type="text" data-meta="execLead" value="${esc(D.meta.execLead)}"></div>
           <div><span class="lbl">Delivery lead</span><input type="text" data-meta="deliveryLead" value="${esc(D.meta.deliveryLead)}"></div>
           <div><span class="lbl">Change lead</span><input type="text" data-meta="changeLead" value="${esc(D.meta.changeLead)}"></div>
-          <div style="grid-column:1/-1"><span class="lbl">Your name — stamped on updates you log</span>
-            <input type="text" data-meta="whoAmI" value="${esc(D.meta.whoAmI || '')}" placeholder="So the activity log says who did what"></div>
+          ${Store.mode === 'api' ? '' : `<div style="grid-column:1/-1"><span class="lbl">Your name — stamped on updates you log</span>
+            <input type="text" data-meta="whoAmI" value="${esc(D.meta.whoAmI || '')}" placeholder="So the activity log says who did what"></div>`}
           <div style="grid-column:1/-1"><span class="lbl">Gate Calculator link</span>
             <input type="text" data-meta="gateToolUrl" value="${esc(D.meta.gateToolUrl)}"
               placeholder="Paste the Gate Calculator URL to link the two tools"></div>
@@ -2218,6 +2225,18 @@ function renderData() {
     </div>
 
     <div class="stack">
+      ${Store.mode === 'api' && Auth.user ? `<div class="card"><header><h2>Your account</h2>
+          <span class="badge ${Auth.user.role === 'admin' ? 'b-v' : 'b-n'}">${esc(Auth.user.role)}</span></header>
+        <div class="body">
+          <div class="row" style="justify-content:space-between;margin-bottom:12px">
+            <div><div style="font-weight:700">${esc(Auth.user.name || '')}</div><div class="src mono">${esc(Auth.user.email)}</div></div>
+            <button class="btn sm" id="signOut">Sign out</button></div>
+          <div class="row" style="align-items:flex-end">
+            <div style="flex:1;min-width:140px"><span class="lbl">Current password</span><input type="password" id="pwCur" autocomplete="current-password"></div>
+            <div style="flex:1;min-width:140px"><span class="lbl">New password (10+)</span><input type="password" id="pwNew" autocomplete="new-password"></div>
+            <button class="btn" id="pwBtn">Change</button></div>
+        </div></div>
+      ${Auth.user.role === 'admin' ? '<div class="card" id="peopleCard"><div class="body"><p class="src" style="margin:0">Loading people…</p></div></div>' : ''}` : ''}
       <div class="card"><header><h2>Where this data lives</h2>
         <span class="badge ${Store.mode === 'db' || Store.mode === 'api' ? 'b-g' : Store.mode === 'local' ? 'b-a' : 'b-r'}">${esc(modeTxt[0])}</span></header>
         <div class="body">
@@ -2266,6 +2285,7 @@ function renderData() {
         </div></div>
     </div>
   </div>`;
+  if ($('#peopleCard')) loadPeople();
 }
 
 /* ── export helpers ─────────────────────────────────────────────── */
@@ -2736,6 +2756,165 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeDrawer();
   if (e.key === 'p' && (e.metaKey || e.ctrlKey) && TAB === 'report') { /* let the browser print */ }
 });
+
+/* ══ SIGN-IN ═══════════════════════════════════════════════════════
+   Accounts are invitation-only and restricted to the client and supplier
+   domains. The session token lives in this browser; every API call
+   carries it, and the server re-checks the account on each request.  */
+const Auth = {
+  token: '', user: null, domains: [], fresh: false, mode: 'signin', resolve: null,
+  load() { try { this.token = localStorage.getItem('cc.session') || ''; } catch (_) {} },
+  set(token, user) {
+    this.token = token; this.user = user;
+    try { localStorage.setItem('cc.session', token); } catch (_) {}
+    this.paintPill();
+  },
+  signOut() {
+    try { localStorage.removeItem('cc.session'); } catch (_) {}
+    location.reload();
+  },
+  async call(action, body) {
+    const r = await fetch('/api/auth?action=' + action, {
+      method: body ? 'POST' : 'GET', headers: Store.headers(), cache: 'no-store',
+      body: body ? JSON.stringify(body) : undefined });
+    let j = {};
+    try { j = await r.json(); } catch (_) {}
+    if (!r.ok) throw Object.assign(new Error(j.error || ('HTTP ' + r.status)), { status: r.status });
+    return j;
+  },
+  paintPill() {
+    const p = $('#userPill'), t = $('#userTxt');
+    if (!p) return;
+    p.hidden = !this.user;
+    if (this.user) t.textContent = this.user.name || this.user.email;
+  },
+  /** show the sign-in screen; resolves once a session exists */
+  show(message) {
+    return new Promise(async resolve => {
+      this.resolve = resolve;
+      try { const d = await this.call('domains'); this.domains = d.domains || []; this.fresh = !!d.fresh; } catch (_) {}
+      this.mode = this.fresh ? 'register' : 'signin';
+      this.render(message || '');
+      $('#auth').hidden = false;
+      const first = $('#auth input'); if (first) first.focus();
+    });
+  },
+  render(err) {
+    const doms = this.domains.map(d => '@' + d).join(' or ') || 'your work';
+    const reg = this.mode === 'register';
+    $('#auth').innerHTML = `<form class="auth-card" id="authForm" autocomplete="on">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div class="mark">O!</div>
+        <div><div class="eyebrow">OwnIT! Digital Products</div>
+          <h2 style="font-size:17px">Wave 1 Command Center</h2></div>
+      </div>
+      ${this.fresh ? `<div class="note info" style="margin-bottom:14px"><strong>No accounts yet.</strong>
+        The first account created becomes the administrator, who then invites everyone else.</div>` : ''}
+      <div class="stack" style="gap:10px">
+        ${reg ? `<div><span class="lbl">Your name</span><input type="text" name="name" autocomplete="name" required></div>` : ''}
+        <div><span class="lbl">Work email — ${esc(doms)}</span>
+          <input type="email" name="email" autocomplete="username" required placeholder="name@${esc(this.domains[0] || 'company.com')}"></div>
+        ${reg && !this.fresh ? `<div><span class="lbl">Invite code — from the project administrator</span>
+          <input type="text" name="invite" autocomplete="off" required style="font-family:var(--mono);text-transform:uppercase"></div>` : ''}
+        <div><span class="lbl">${reg ? 'Choose a password — at least 10 characters' : 'Password'}</span>
+          <input type="password" name="password" autocomplete="${reg ? 'new-password' : 'current-password'}" required minlength="${reg ? 10 : 1}"></div>
+        <div class="auth-err" id="authErr" ${err ? '' : 'hidden'}>${esc(err)}</div>
+        <button class="btn primary" type="submit" id="authGo" style="padding:9px 14px;font-size:13.5px">
+          ${reg ? 'Create account' : 'Sign in'}</button>
+        ${this.fresh ? '' : `<button class="btn ghost sm" type="button" id="authSwap">
+          ${reg ? 'Already have an account? Sign in' : 'First time here? Use your invite code'}</button>`}
+      </div>
+      <p class="src" style="margin:16px 0 0">Access is by invitation, for ${esc(doms)} addresses only.
+        Ask the project administrator if you need an account.</p>
+    </form>`;
+  },
+  async submit(form) {
+    const f = Object.fromEntries(new FormData(form).entries());
+    const go = $('#authGo'); go.disabled = true;
+    try {
+      const j = this.mode === 'register'
+        ? await this.call('register', { email: f.email, name: f.name, password: f.password, invite: f.invite || '' })
+        : await this.call('login', { email: f.email, password: f.password });
+      this.set(j.token, j.user);
+      $('#auth').hidden = true;
+      if (this.resolve) { const r = this.resolve; this.resolve = null; r(); }
+    } catch (e) {
+      const el = $('#authErr'); el.textContent = e.message; el.hidden = false; go.disabled = false;
+    }
+  },
+};
+Auth.load();
+document.addEventListener('submit', e => {
+  if (e.target.id === 'authForm') { e.preventDefault(); Auth.submit(e.target); }
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.id === 'authSwap') { Auth.mode = Auth.mode === 'signin' ? 'register' : 'signin'; Auth.render(''); $('#auth input').focus(); return; }
+  if (t.id === 'signOut') { Auth.signOut(); return; }
+  if (t.id === 'pwBtn') {
+    const cur = $('#pwCur').value, next = $('#pwNew').value;
+    t.disabled = true;
+    Auth.call('change-password', { current: cur, next }).then(() => { flash('Password changed.'); $('#pwCur').value = $('#pwNew').value = ''; })
+      .catch(err => flash(err.message, 'warn')).finally(() => { t.disabled = false; });
+    return;
+  }
+  if (t.id === 'invBtn') {
+    const email = $('#invEmail').value.trim(), name = $('#invName').value.trim();
+    if (!email) return;
+    t.disabled = true;
+    Auth.call('invite', { email, name }).then(j => {
+      flash(`Invite code for ${j.email}: ${j.invite}`); $('#invEmail').value = $('#invName').value = ''; loadPeople();
+    }).catch(err => flash(err.message, 'warn')).finally(() => { t.disabled = false; });
+    return;
+  }
+  if (t.dataset.uact) {
+    const email = t.dataset.uemail, act = t.dataset.uact;
+    if (act === 'remove' && !confirm(`Remove ${email}?`)) return;
+    const body = act === 'disable' ? { email, status: 'disabled' } : act === 'enable' ? { email, status: 'active' }
+      : act === 'admin' ? { email, role: 'admin' } : act === 'member' ? { email, role: 'member' } : { email };
+    Auth.call(act === 'remove' ? 'remove' : 'update', body).then(loadPeople).catch(err => flash(err.message, 'warn'));
+    return;
+  }
+  if (t.dataset.copyinv) {
+    navigator.clipboard?.writeText(t.dataset.copyinv).then(() => flash('Code copied.'), () => {});
+  }
+});
+
+/** the People card on Data & setup — admins only, loaded on demand */
+async function loadPeople() {
+  const el = $('#peopleCard'); if (!el) return;
+  let users = [];
+  try { users = (await Auth.call('users')).users; }
+  catch (e) { el.innerHTML = `<div class="body"><p class="src" style="margin:0">${esc(e.message)}</p></div>`; return; }
+  const doms = Auth.domains.map(d => '@' + d).join(' or ');
+  el.innerHTML = `<header><h2>People</h2><span class="hint">${users.filter(u => u.status === 'active').length} active · ${users.filter(u => u.status === 'invited').length} invited</span></header>
+    <div class="body">
+      <div class="row" style="align-items:flex-end;margin-bottom:12px">
+        <div style="flex:1;min-width:200px"><span class="lbl">Invite by email${doms ? ' — ' + esc(doms) : ''}</span>
+          <input type="email" id="invEmail" placeholder="name@avangrid.com"></div>
+        <div style="flex:1;min-width:150px"><span class="lbl">Name (optional)</span><input type="text" id="invName"></div>
+        <button class="btn primary" id="invBtn">Create invite</button>
+      </div>
+      <p class="src" style="margin:0 0 12px">Send the person their code by Teams or email; they use it with their work address to set a password.
+        Codes are shown here until used.</p>
+      <div class="tscroll"><table><thead><tr><th>Person</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead>
+        <tbody>${users.map(u => `<tr>
+          <td><div style="font-weight:600">${esc(u.name || '—')}</div><div class="src mono">${esc(u.email)}</div></td>
+          <td><span class="badge ${u.role === 'admin' ? 'b-v' : 'b-n'}">${esc(u.role)}</span></td>
+          <td>${u.status === 'invited' ? `<span class="badge b-a">Invited</span> <span class="mono" style="font-size:11px">${esc(u.invite || '')}</span>
+              <button class="btn ghost sm" data-copyinv="${esc(u.invite || '')}">Copy</button>`
+            : `<span class="badge ${u.status === 'active' ? 'b-g' : 'b-r'}">${esc(u.status)}</span>`}</td>
+          <td class="src mono">${u.lastLogin ? esc(fmtTs(u.lastLogin)) : '—'}</td>
+          <td style="white-space:nowrap">${u.email === (Auth.user && Auth.user.email) ? '<span class="src">you</span>' : `
+            ${u.status === 'active' ? `<button class="btn sm" data-uact="disable" data-uemail="${esc(u.email)}">Disable</button>` : ''}
+            ${u.status === 'disabled' ? `<button class="btn sm" data-uact="enable" data-uemail="${esc(u.email)}">Enable</button>` : ''}
+            ${u.status !== 'invited' ? (u.role === 'admin'
+              ? `<button class="btn sm" data-uact="member" data-uemail="${esc(u.email)}">Make member</button>`
+              : `<button class="btn sm" data-uact="admin" data-uemail="${esc(u.email)}">Make admin</button>`) : ''}
+            <button class="btn ghost sm" data-uact="remove" data-uemail="${esc(u.email)}">Remove</button>`}</td>
+        </tr>`).join('')}</tbody></table></div>
+    </div>`;
+}
 
 /* ══ BOOT ══════════════════════════════════════════════════════════ */
 D = freshData();
