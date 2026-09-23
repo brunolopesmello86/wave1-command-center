@@ -23,7 +23,14 @@ browser ── GET /api/sync?since=N  (every 4 s)  ──▶  api/sync.js ──
 | Name | Required | What |
 |---|---|---|
 | `DATABASE_URL` | yes | Neon connection string (set automatically by the Vercel ↔ Neon integration) |
-| `APP_PASSWORD` | no | If set, the page asks for this key once and sends it on every call |
+| `SESSION_SECRET` | yes | Random 32+ character string signing session tokens; rotating it signs everyone out |
+| `ALLOWED_DOMAINS` | no | Comma-separated email domains that may hold an account (default `nttdata.com,emeal.nttdata.com,avangrid.com`) |
+
+## Accounts
+
+Invitation-only. The first account created on an empty database becomes the
+administrator; from *Data & setup → People* an admin invites others by email,
+hands over the one-time code, and can disable, promote or remove anyone.
 
 ## Local development
 
