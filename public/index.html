@@ -262,6 +262,8 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 .due.late{color:var(--rose);font-weight:700}
 .due.soon{color:var(--amber);font-weight:700}
 .pstrip{width:3px;border-radius:2px;align-self:stretch;flex:none}
+.kblock{font-size:10.5px;line-height:1.4;color:var(--rose);background:var(--rose-soft);
+  border-radius:4px;padding:3px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── calendar ───────────────────────────── */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);
@@ -1276,10 +1278,12 @@ function card(w) {
           <span class="chip mono">${esc(w.act)}</span>
           <span class="chip">${esc(w.pilotShort)}</span>
           ${w.gate ? `<span class="badge b-v">${esc(w.gate)}</span>` : ''}
-          ${w.blocker ? '<span class="badge b-r">Blocked</span>' : ''}
+          ${w.status === 'blocked' ? '<span class="badge b-r">Blocked</span>' : ''}
         </div>
       </div>
     </div>
+    ${w.status === 'blocked' ? `<div class="kblock" title="${esc(w.blocker || 'No blocker recorded')}">${
+      w.blocker ? esc(w.blocker) : 'No blocker recorded yet'}</div>` : ''}
     ${w.pct > 0 && w.pct < 100 ? bar(w.pct) : ''}
     <div class="kfoot">
       <span class="who">${w.owner ? `<span class="av">${esc(initials(w.owner))}</span>
@@ -1310,7 +1314,10 @@ function openCard(id) {
       <div><span class="lbl">Planned end week</span>
         <input type="number" min="1" max="${D.meta.weeks}" data-w="${id}" data-wf="endWk" value="${w.endWk}"></div>
     </div>
-    <div><span class="lbl">Blocker — shows on the board and the Friday report</span>
+    <div><span class="lbl">Blocker — shown on the card while it sits in Blocked, and in the Friday report</span>
+      ${w.status !== 'blocked' && w.blocker ? `<div class="note" style="margin-bottom:6px">
+        This card is in <strong>${esc((STATUSES.find(x => x.k === w.status) || {}).t || w.status)}</strong>, so this note is no longer
+        shown on the board or counted as blocked. <button class="btn sm" data-clearblk="${id}">Clear the note</button></div>` : ''}
       <textarea data-w="${id}" data-wf="blocker" placeholder="What is stopping this, and who can unblock it.">${esc(w.blocker)}</textarea></div>
     <div><span class="lbl">Notes</span>
       <textarea data-w="${id}" data-wf="notes" placeholder="Progress notes, decisions, links.">${esc(w.notes)}</textarea></div>
@@ -2637,6 +2644,10 @@ document.addEventListener('click', e => {
   if (t.id === 'drawerClose') { closeDrawer(); return; }
 
   /* — backlog — */
+  if (t.dataset.clearblk) {
+    setWork(t.dataset.clearblk, { blocker: '' });
+    flash('Blocker note cleared.'); paint(); openCard(t.dataset.clearblk); return;
+  }
   if (t.dataset.card) { openCard(t.dataset.card); return; }
   if (t.id === 'clearF') { F.pilot = F.phase = F.owner = F.q = ''; paint(); return; }
   if (t.id === 'addWork') {
