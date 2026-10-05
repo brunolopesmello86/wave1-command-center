@@ -356,6 +356,8 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 /* ── executive & report document ────────── */
 .doc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   box-shadow:var(--shadow);padding:26px 30px;max-width:1080px;margin:0 auto}
+/* a wider frame on screen so the landscape choice is visible before printing */
+.doc.landscape{max-width:1340px}
 .doc-head{border-bottom:2px solid var(--green);padding-bottom:13px;margin-bottom:18px;
   display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
 .doc-head h2{font-size:22px;font-weight:700;letter-spacing:-.02em}
@@ -388,6 +390,18 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
   .doc p{font-size:10pt}
   .tile .tv{font-size:19pt}
   .pagebreak{break-before:page;page-break-before:always}
+  /* on screen the gantt scrolls sideways; on paper it must fit the page box */
+  .gt{overflow:visible!important;break-inside:avoid;page-break-inside:avoid;border-color:#c4c4c4}
+  .gt table{min-width:0!important;width:100%;table-layout:fixed}
+  .gt th.nm,.gt td.nm{position:static;min-width:0;width:112px}
+  .gt th.wk{width:auto;font-size:6pt;padding:3px 0}
+  .gt td,.gcell{height:19px}
+  .gt td.nm{padding:3px 5px}
+  .gt td.nm .src{font-size:6pt}
+  .gt td.nm div[style*="font-size:12px"]{font-size:7.5pt!important}
+  .gbar{height:12px;top:4px;font-size:6pt;padding:0 2px;box-shadow:none}
+  .gms{width:12px;height:12px;top:4px;border-width:1.5px}
+  .gcell.now{background:#eef4ef!important}
   a[href]::after{content:""}
   tr,.fitem,.erow{break-inside:avoid}
 }
@@ -1336,12 +1350,13 @@ function openCard(id) {
 /* ══ 3 · TIMELINE & MILESTONES ═════════════════════════════════════ */
 let TLMode = 'pilot';   // 'pilot' | 'phase' | 'deliv'
 
-function renderTimeline() {
-  const el = $('#panel-timeline');
+/** The gantt for one grouping — shared by the Timeline tab and the Friday
+    report. `live` adds the click targets; the report copy is inert so a
+    printed page carries no affordance that does nothing on paper. */
+function ganttHTML(mode, live = true) {
   const W = D.meta.weeks, wk = currentWeek();
   const ms = D.milestones.slice().sort((a, b) => a.week - b.week);
-
-  const head = `<tr><th class="nm">${TLMode === 'pilot' ? 'Pilot' : TLMode === 'phase' ? 'Lifecycle phase' : 'Deliverable'}</th>
+  const head = `<tr><th class="nm">${mode === 'pilot' ? 'Pilot' : mode === 'phase' ? 'Lifecycle phase' : 'Deliverable'}</th>
     ${Array.from({ length: W }, (_, i) => `<th class="wk"${i + 1 === wk ? ' style="color:var(--green)"' : ''}>W${i + 1}</th>`).join('')}</tr>`;
 
   const cells = (bars, msList) => Array.from({ length: W }, (_, i) => {
@@ -1356,17 +1371,17 @@ function renderTimeline() {
         const off = mk.length === 1 ? 0 : (j - (mk.length - 1) / 2) * 13;
         return `<div class="gms ${m.status === 'done' ? 'done' : m.week < wk ? 'risk' : m.week === wk ? 'a' : ''}"
           style="left:calc(50% - 10px + ${off}px)" title="${esc(m.id + ' · ' + m.name)}"
-          data-openms="${m.id}"></div>`;
+          ${live ? `data-openms="${m.id}"` : ''}></div>`;
       }).join('')}
     </td>`;
   }).join('');
 
   let rows = '';
-  if (TLMode === 'pilot') {
+  if (mode === 'pilot') {
     rows = D.pilots.map(p => {
       const pr = pilotProgress(p.id);
       const cls = p.rag === 'R' ? 'r' : p.rag === 'A' ? 'a' : p.rag === 'G' ? '' : 'n';
-      return `<tr><td class="nm" data-openpilot="${p.id}" style="cursor:pointer">
+      return `<tr><td class="nm"${live ? ` data-openpilot="${p.id}" style="cursor:pointer"` : ''}>
           <div style="display:flex;gap:7px;align-items:center">
             <span class="rag ${p.rag}"></span>
             <div style="min-width:0"><div style="font-weight:600;font-size:12px">${esc(p.short)}</div>
@@ -1374,7 +1389,7 @@ function renderTimeline() {
           </div></td>
         ${cells([{ s: p.startWeek, e: p.endWeek, cls, label: pr.pct + '%', title: p.name }], [])}</tr>`;
     }).join('');
-  } else if (TLMode === 'phase') {
+  } else if (mode === 'phase') {
     rows = PHASES.map(ph => {
       const acts = D.activityTemplate.filter(a => a.phase === ph);
       const s = Math.min(...acts.map(a => a.startWk)), e = Math.max(...acts.map(a => a.endWk));
@@ -1387,12 +1402,23 @@ function renderTimeline() {
         ${cells([{ s, e, cls: pct === 100 ? '' : 'b', label: pct + '%', title: ph }], [])}</tr>`;
     }).join('');
   } else {
-    rows = D.deliverables.map(d => `<tr><td class="nm" data-opendeliv="${d.id}" style="cursor:pointer">
+    rows = D.deliverables.map(d => `<tr><td class="nm"${live ? ` data-opendeliv="${d.id}" style="cursor:pointer"` : ''}>
         <div style="display:flex;gap:7px;align-items:center"><span class="rag ${d.rag}"></span>
         <div style="min-width:0"><div style="font-weight:600;font-size:12px">${esc(d.id)} · ${esc(d.name)}</div>
           <div class="src mono">due ${weekLabel(d.dueWeek)} · ${d.pct}%</div></div></div></td>
       ${cells([{ s: 1, e: d.dueWeek, cls: d.rag === 'R' ? 'r' : d.rag === 'A' ? 'a' : d.rag === 'G' ? '' : 'n', label: d.pct + '%', title: d.name }], [])}</tr>`).join('');
   }
+
+  return `<div class="gt"><table><thead>${head}</thead>
+    <tbody><tr><td class="nm" style="font-weight:700;font-size:11px;letter-spacing:.08em;
+        text-transform:uppercase;color:var(--faint);background:var(--surface-2)">Milestones</td>
+      ${cells([], ms)}</tr>${rows}</tbody></table></div>`;
+}
+
+function renderTimeline() {
+  const el = $('#panel-timeline');
+  const wk = currentWeek();
+  const ms = D.milestones.slice().sort((a, b) => a.week - b.week);
 
   el.innerHTML = `<div class="stack">
     <div class="card noprint"><div class="body tight"><div class="row">
@@ -1409,10 +1435,7 @@ function renderTimeline() {
 
     <div class="card"><header><h2>Wave 1 · ${D.meta.weeks}-week plan</h2>
       <span class="hint">Week ${wk} of ${D.meta.weeks} · ${fmtD(weekStart(1))} to ${fmtD(weekEnd(D.meta.weeks))}</span></header>
-      <div class="gt"><table><thead>${head}</thead>
-        <tbody><tr><td class="nm" style="font-weight:700;font-size:11px;letter-spacing:.08em;
-            text-transform:uppercase;color:var(--faint);background:var(--surface-2)">Milestones</td>
-          ${cells([], ms)}</tr>${rows}</tbody></table></div>
+      ${ganttHTML(TLMode)}
     </div>
 
     <div class="card">
@@ -2330,7 +2353,7 @@ function newReport(dateStr) {
   const { from, to } = reportPeriod(dateStr || todayISO());
   const f = weekFacts(from, to);
   return {
-    id: uid('RPT'), from, to, week: f.wk, created: Date.now(),
+    id: uid('RPT'), from, to, week: f.wk, created: Date.now(), orient: 'portrait',
     rag: D.meta.overallRag, author: D.meta.deliveryLead,
     headline: composeNarrative(f),
     achievements: f.updates.filter(u => u.kind === 'g').map(u => u.what).join('\n') ||
@@ -2338,6 +2361,15 @@ function newReport(dateStr) {
     nextWeek: f.sessionsNext.slice(0, 8).map(e => `${fmtD(e.date)} — ${e.title}`).join('\n'),
     decisions: '', asks: '',
   };
+}
+
+/** The printed page box. `@page` cannot be toggled with a class, so the rule
+    is rewritten into its own style element whenever the choice changes. */
+function applyOrientation() {
+  const o = (RPT && RPT.orient) === 'landscape' ? 'landscape' : 'portrait';
+  let st = document.getElementById('pageStyle');
+  if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
+  st.textContent = `@page{size:A4 ${o};margin:${o === 'landscape' ? '11mm 12mm' : '13mm 12mm'}}`;
 }
 
 function renderReport() {
@@ -2352,6 +2384,9 @@ function renderReport() {
     <div class="card"><div class="body tight"><div class="row">
       <div style="min-width:135px"><span class="lbl">Week ending</span>
         <input type="date" id="rptTo" value="${esc(RPT.to)}"></div>
+      <div style="min-width:142px"><span class="lbl">Page orientation</span>
+        <div class="seg">${[['portrait', 'Vertical'], ['landscape', 'Horizontal']].map(([k, l]) =>
+          `<button type="button" data-rorient="${k}" aria-pressed="${(RPT.orient || 'portrait') === k}">${l}</button>`).join('')}</div></div>
       <div style="min-width:118px"><span class="lbl">Report RAG</span>
         <div class="seg">${['G', 'A', 'R'].map(v => `<button type="button" data-rrag="${v}"
           aria-pressed="${RPT.rag === v}" data-v="${v}">${v}</button>`).join('')}</div></div>
@@ -2392,7 +2427,7 @@ function renderReport() {
       </div>`).join('')}</div></div>` : ''}
   </div>
 
-  <div class="doc" id="reportDoc">
+  <div class="doc${(RPT.orient || 'portrait') === 'landscape' ? ' landscape' : ''}" id="reportDoc">
     <div class="doc-head">
       <div>
         <div class="eyebrow">${esc(D.meta.supplier)} · ${esc(D.meta.client)}</div>
@@ -2438,6 +2473,16 @@ function renderReport() {
             <td><span class="badge ${ragCls(p.rag)}">${p.rag === 'N' ? '—' : ragOf(p.rag)}</span></td>
             <td>${esc(p.summary || p.nextStep || '—')}</td></tr>`;
         }).join('')}</tbody></table>
+    </div>
+
+    <div class="doc-sec pagebreak"><h3>Timeline — by pilot</h3>
+      <p style="margin:0 0 9px">Each pilot across the ${D.meta.weeks}-week wave, with completion to date and the wave milestones on the top row.</p>
+      ${ganttHTML('pilot', false)}
+    </div>
+
+    <div class="doc-sec"><h3>Timeline — by lifecycle phase</h3>
+      <p style="margin:0 0 9px">The same wave seen by lifecycle phase, with the share of each phase's activities complete across all ${D.pilots.length} pilots.</p>
+      ${ganttHTML('phase', false)}
     </div>
 
     <div class="doc-sec pagebreak"><h3>Milestones</h3>
@@ -2502,6 +2547,7 @@ function renderReport() {
       <span>Prepared by ${esc(RPT.author || '—')} · ${esc(D.meta.supplier)}</span>
     </div>
   </div>`;
+  applyOrientation();
 }
 /* ══ 10 · DATA & SETUP ═════════════════════════════════════════════ */
 function renderData() {
@@ -2979,8 +3025,9 @@ document.addEventListener('click', e => {
 
   /* — report — */
   if (t.dataset.rrag) { RPT.rag = t.dataset.rrag; paint(); return; }
+  if (t.dataset.rorient) { RPT.orient = t.dataset.rorient; paint(); return; }
   if (t.id === 'rptRecompose') {
-    const keep = { decisions: RPT.decisions, asks: RPT.asks, author: RPT.author, rag: RPT.rag };
+    const keep = { decisions: RPT.decisions, asks: RPT.asks, author: RPT.author, rag: RPT.rag, orient: RPT.orient };
     RPT = { ...newReport(RPT.to), ...keep, id: RPT.id };
     flash('Re-composed from the current data.'); paint(); return;
   }
@@ -2991,7 +3038,7 @@ document.addEventListener('click', e => {
     logUpdate('Weekly report saved', 'Week ending ' + fmtD(RPT.to), 'b', 'W' + RPT.week);
     flash('Report saved.'); paint(); return;
   }
-  if (t.id === 'rptPrint') { window.print(); return; }
+  if (t.id === 'rptPrint') { applyOrientation(); window.print(); return; }
   if (t.dataset.loadrpt) {
     const r = D.reports.find(x => x.id === t.dataset.loadrpt);
     if (r) { RPT = { ...r }; paint(); } return;
