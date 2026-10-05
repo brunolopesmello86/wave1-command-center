@@ -360,7 +360,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 .doc.landscape{max-width:1340px}
 .doc-head{border-bottom:2px solid var(--green);padding-bottom:13px;margin-bottom:18px;
   display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
-.doc-head h2{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.doc-head h2{font-size:19px;font-weight:700;letter-spacing:-.015em;line-height:1.25;max-width:30ch}
 .doc-sec{margin-top:22px;break-inside:avoid}
 .doc-sec>h3{font-size:11.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
   color:var(--green);margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
@@ -376,6 +376,11 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 /* ── print: the Friday pack only ────────── */
 @media print{
   @page{size:A4 portrait;margin:13mm 12mm}
+  /* Keep every fill. A browser drops background colour unless told otherwise,
+     and "Background graphics" is off by default in the Save-as-PDF dialog —
+     which silently erased the gantt bars, the RAG dots and the badges while
+     leaving bordered shapes like the milestone diamonds visible. */
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   :root{--bg:#fff;--surface:#fff;--surface-2:#fff;--surface-3:#EDEDED;--band:#F1F8F1;
     --ink:#111;--ink-2:#2c2c2c;--muted:#4d4d4d;--faint:#6b6b6b;
     --line:#b5b5b5;--line-soft:#dcdcdc;--shadow:none;--shadow-lift:none}
@@ -2349,11 +2354,26 @@ function composeNarrative(f) {
   return bits.join(' ');
 }
 
+/** The report title, to the agreed schema:
+      <project> - Weekly Report - Week <n> day <d> MM.DD.YYYY
+    The week and day are counted from meta.start, so the title can never
+    disagree with the plan the rest of the tool is drawn from. */
+function reportTitle(r) {
+  const d = (r && r.day) || (r && r.to) || todayISO();
+  const wk = clamp(weekOf(d) || 1, 1, D.meta.weeks);
+  const day = clamp(Math.round((parse(d) - parse(weekStart(wk))) / DAY) + 1, 1, 7);
+  const dt = parse(d), two = n => String(n).padStart(2, '0');
+  return `${D.meta.projectName} - Weekly Report - Week ${wk} day ${day} ` +
+    `${two(dt.getMonth() + 1)}.${two(dt.getDate())}.${dt.getFullYear()}`;
+}
+
 function newReport(dateStr) {
   const { from, to } = reportPeriod(dateStr || todayISO());
   const f = weekFacts(from, to);
+  const t = todayISO();
   return {
     id: uid('RPT'), from, to, week: f.wk, created: Date.now(), orient: 'portrait',
+    day: (t >= from && t <= to) ? t : from,
     rag: D.meta.overallRag, author: D.meta.deliveryLead,
     headline: composeNarrative(f),
     achievements: f.updates.filter(u => u.kind === 'g').map(u => u.what).join('\n') ||
@@ -2384,6 +2404,8 @@ function renderReport() {
     <div class="card"><div class="body tight"><div class="row">
       <div style="min-width:135px"><span class="lbl">Week ending</span>
         <input type="date" id="rptTo" value="${esc(RPT.to)}"></div>
+      <div style="min-width:135px"><span class="lbl">Report date — the day in the title</span>
+        <input type="date" id="rptDay" value="${esc(RPT.day || RPT.to)}"></div>
       <div style="min-width:142px"><span class="lbl">Page orientation</span>
         <div class="seg">${[['portrait', 'Vertical'], ['landscape', 'Horizontal']].map(([k, l]) =>
           `<button type="button" data-rorient="${k}" aria-pressed="${(RPT.orient || 'portrait') === k}">${l}</button>`).join('')}</div></div>
@@ -2419,7 +2441,8 @@ function renderReport() {
       <span class="hint">${saved.length}</span></header><div class="body tight">
       ${saved.slice(0, 8).map(r => `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line-soft)">
         <span class="chip mono">W${r.week}</span>
-        <span style="font-size:12.5px">Week ending ${esc(fmtD(r.to))}</span>
+        <span style="font-size:12.5px" title="${esc(reportTitle(r))}">Week ending ${esc(fmtD(r.to))}${
+          r.day ? ' · issued ' + esc(fmtD(r.day)) : ''}</span>
         <span class="badge ${ragCls(r.rag)}">${esc(r.rag)}</span>
         <span class="spacer"></span>
         <button class="btn sm" data-loadrpt="${r.id}">Open</button>
@@ -2431,9 +2454,9 @@ function renderReport() {
     <div class="doc-head">
       <div>
         <div class="eyebrow">${esc(D.meta.supplier)} · ${esc(D.meta.client)}</div>
-        <h2>${esc(D.meta.projectName)}</h2>
+        <h2>${esc(reportTitle(RPT))}</h2>
         <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">
-          Weekly status report · Week ${f.wk} of ${D.meta.weeks} · ${esc(fmtDL(RPT.to))}</p>
+          Week ${f.wk} of ${D.meta.weeks} · reporting period ${esc(fmtDL(RPT.from))} to ${esc(fmtDL(RPT.to))}</p>
       </div>
       <div class="ragbox">
         <span class="rg" style="background:${RPT.rag === 'G' ? 'var(--green)' : RPT.rag === 'A' ? 'var(--amber)' : RPT.rag === 'R' ? 'var(--rose)' : 'var(--faint)'}"></span>
@@ -3027,7 +3050,8 @@ document.addEventListener('click', e => {
   if (t.dataset.rrag) { RPT.rag = t.dataset.rrag; paint(); return; }
   if (t.dataset.rorient) { RPT.orient = t.dataset.rorient; paint(); return; }
   if (t.id === 'rptRecompose') {
-    const keep = { decisions: RPT.decisions, asks: RPT.asks, author: RPT.author, rag: RPT.rag, orient: RPT.orient };
+    const keep = { decisions: RPT.decisions, asks: RPT.asks, author: RPT.author, rag: RPT.rag,
+      orient: RPT.orient, day: RPT.day };
     RPT = { ...newReport(RPT.to), ...keep, id: RPT.id };
     flash('Re-composed from the current data.'); paint(); return;
   }
@@ -3038,7 +3062,17 @@ document.addEventListener('click', e => {
     logUpdate('Weekly report saved', 'Week ending ' + fmtD(RPT.to), 'b', 'W' + RPT.week);
     flash('Report saved.'); paint(); return;
   }
-  if (t.id === 'rptPrint') { applyOrientation(); window.print(); return; }
+  if (t.id === 'rptPrint') {
+    applyOrientation();
+    // the browser names the saved PDF after the document title
+    const was = document.title;
+    document.title = reportTitle(RPT);
+    const restore = () => { document.title = was; window.removeEventListener('afterprint', restore); };
+    window.addEventListener('afterprint', restore);
+    setTimeout(restore, 60000);
+    window.print();
+    return;
+  }
   if (t.dataset.loadrpt) {
     const r = D.reports.find(x => x.id === t.dataset.loadrpt);
     if (r) { RPT = { ...r }; paint(); } return;
@@ -3084,6 +3118,7 @@ document.addEventListener('change', e => {
   if (el.id === 'fowner') { F.owner = el.value; paint(); return; }
   if (el.id === 'calFilter') { CalFilter = el.value; paint(); return; }
   if (el.id === 'rptTo') { RPT = newReport(el.value); paint(); return; }
+  if (el.id === 'rptDay') { RPT.day = el.value; paint(); return; }
   if (el.dataset.w && el.dataset.wf) { writeWork(el, true); return; }
   if (el.dataset.ev && el.dataset.evf) { writeRec('events', el.dataset.ev, el.dataset.evf, el, true); return; }
   if (el.dataset.ms && el.dataset.msf) { writeRec('milestones', el.dataset.ms, el.dataset.msf, el, true); return; }
