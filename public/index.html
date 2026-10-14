@@ -281,6 +281,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 .kcard.drag{opacity:.4}
 .kcard .kt{font-size:12.5px;font-weight:600;line-height:1.32}
 .kcard .kmeta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.kproj{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
 .kcard .kfoot{display:flex;gap:7px;align-items:center;justify-content:space-between;
   font-size:10.5px;color:var(--muted);border-top:1px solid var(--line-soft);padding-top:6px}
 .kcard .who{display:flex;align-items:center;gap:5px;min-width:0}
@@ -1005,7 +1006,7 @@ function allWork() {
       const id = p.id + '-' + a.id;
       const o = ov[id] || {};
       out.push({
-        id, pilot: p.id, pilotShort: p.short, act: a.id, phase: a.phase,
+        id, pilot: p.id, pilotShort: p.short, project: p.projectName || '', act: a.id, phase: a.phase,
         title: a.title, role: a.role, output: a.output, gate: a.gate,
         startWk: o.startWk ?? a.startWk, endWk: o.endWk ?? a.endWk,
         status: o.status || 'backlog', owner: o.owner || '', notes: o.notes || '',
@@ -1260,7 +1261,8 @@ function renderBacklog() {
   if (F.owner) items = items.filter(w => (w.owner || '') === F.owner);
   if (F.q) {
     const q = F.q.toLowerCase();
-    items = items.filter(w => (w.title + ' ' + w.act + ' ' + w.pilotShort + ' ' + w.role).toLowerCase().includes(q));
+    items = items.filter(w =>
+      (w.title + ' ' + w.act + ' ' + w.pilotShort + ' ' + w.project + ' ' + w.role).toLowerCase().includes(q));
   }
   const owners = Array.from(new Set(allWork().map(w => w.owner).filter(Boolean))).sort();
   const counts = {};
@@ -1327,6 +1329,7 @@ function card(w) {
         <div class="kmeta" style="margin-top:5px">
           <span class="chip mono">${esc(w.act)}</span>
           <span class="chip">${esc(w.pilotShort)}</span>
+          ${w.project ? `<span class="chip on kproj" title="${esc(w.project)}">${esc(w.project)}</span>` : ''}
           ${w.gate ? `<span class="badge b-v">${esc(w.gate)}</span>` : ''}
           ${w.status === 'blocked' ? '<span class="badge b-r">Blocked</span>' : ''}
         </div>
@@ -1349,7 +1352,7 @@ function openCard(id) {
   const w = getWork(id);
   if (!w) return;
   const p = D.pilots.find(x => x.id === w.pilot);
-  drawer(`${w.act} · ${p ? p.short : w.pilot}`, w.title, `
+  drawer(`${w.act} · ${p ? p.short : w.pilot}${w.project ? ' · ' + w.project : ''}`, w.title, `
     <div class="grid g2">
       <div><span class="lbl">Status</span>
         <select data-w="${id}" data-wf="status">${opts(STATUSES.map(s => [s.k, s.t]), w.status)}</select></div>
@@ -2856,11 +2859,11 @@ const csvCell = v => {
 const toCSV = (head, rows) => [head.map(csvCell).join(','), ...rows.map(r => r.map(csvCell).join(','))].join('\r\n');
 
 function boardCSV() {
-  return toCSV(['Pilot', 'Pilot name', 'Activity', 'Phase', 'Title', 'Accountable role', 'Status',
+  return toCSV(['Pilot', 'Pilot name', 'Project', 'Activity', 'Phase', 'Title', 'Accountable role', 'Status',
     'Owner', 'Due', 'Percent', 'Start week', 'End week', 'Gate', 'Expected output', 'Blocker', 'Notes'],
     allWork().map(w => {
       const p = D.pilots.find(x => x.id === w.pilot) || {};
-      return [w.pilot, p.name || '', w.act, w.phase, w.title, w.role,
+      return [w.pilot, p.name || '', w.project, w.act, w.phase, w.title, w.role,
         (STATUSES.find(s => s.k === w.status) || {}).t || w.status, w.owner, w.due, w.pct,
         w.startWk, w.endWk, w.gate, w.output, w.blocker, (w.notes || '').replace(/\s+/g, ' ')];
     }));
