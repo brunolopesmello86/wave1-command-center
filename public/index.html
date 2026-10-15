@@ -562,7 +562,7 @@ const V2_MAP = {
   P06: 'P07', P07: 'P10', P08: 'P11', P09: 'P08', P10: 'P09',
 };
 /** fields a person edits — everything else comes from the seed */
-const PILOT_USER_FIELDS = ['rag', 'phase', 'summary', 'nextStep', 'blockers', 'startWeek', 'endWeek'];
+const PILOT_USER_FIELDS = ['rag', 'phase', 'summary', 'nextStep', 'blockers', 'startWeek', 'endWeek', 'active'];
 
 function migratePlan(from) {
   if (from >= PLAN_VERSION) return;
@@ -1039,10 +1039,16 @@ function pilotProgress(pid) {
   return { total: items.length, done, active, blocked, pct: Math.round(done / items.length * 100) };
 }
 function overallProgress() {
-  const items = allWork();
+  const live = new Set(activePilots().map(p => p.id));
+  const items = allWork().filter(w => live.has(w.pilot));
   const done = items.filter(w => w.status === 'done').length;
-  return { total: items.length, done, pct: Math.round(done / items.length * 100) };
+  return { total: items.length, done, pct: items.length ? Math.round(done / items.length * 100) : 0 };
 }
+/** A pilot counts towards the wave unless someone has switched it off.
+    Undefined means active, so existing pilots are untouched. */
+const isActive = p => p && p.active !== false;
+function activePilots() { return D.pilots.filter(isActive); }
+
 function ragOf(v) { return { G: 'Green', A: 'Amber', R: 'Red', N: 'Not set' }[v] || 'Not set'; }
 function ragCls(v) { return { G: 'b-g', A: 'b-a', R: 'b-r' }[v] || 'b-n'; }
 function dueClass(d, status) {
@@ -1144,7 +1150,9 @@ function renderExec() {
         <div class="ts">${fmtD(weekStart(wk))} – ${fmtD(weekEnd(wk))}</div></div>
       <div class="tile acc"><div class="tl">Activities complete</div>
         <div class="tv">${P.pct}<small>%</small></div>
-        <div class="ts">${P.done} of ${P.total} across ${D.pilots.length} pilots</div></div>
+        <div class="ts">${P.done} of ${P.total} across ${activePilots().length} active pilot${
+          activePilots().length === 1 ? '' : 's'}${
+          D.pilots.length - activePilots().length ? ` · ${D.pilots.length - activePilots().length} stood down` : ''}</div></div>
       <div class="tile acc"><div class="tl">Milestones met</div>
         <div class="tv">${msDone}<small>/ ${ms.length}</small></div>
         <div class="ts">${nextMs ? `Next: ${nextMs.id} · ${weekLabel(nextMs.week)}` : 'All milestones met'}</div></div>
@@ -1166,8 +1174,9 @@ function renderExec() {
               <th class="r">Done</th><th class="r">Blocked</th><th>RAG</th><th>Next step</th></tr></thead>
             <tbody>${D.pilots.map(p => {
               const pr = pilotProgress(p.id);
-              return `<tr data-openpilot="${p.id}" style="cursor:pointer">
-                <td><div style="font-weight:600">${esc(p.short)}</div>
+              return `<tr data-openpilot="${p.id}" style="cursor:pointer${isActive(p) ? '' : ';opacity:.55'}">
+                <td><div style="font-weight:600">${esc(p.short)}${
+                  isActive(p) ? '' : ' <span class="badge b-n">Not activated</span>'}</div>
                   ${p.projectName ? `<div style="font-size:11px;color:var(--green);font-weight:600">${esc(p.projectName)}</div>` : ''}
                   <div class="src mono">${p.id}${p.jiraRef ? ' · ' + esc(p.jiraRef) : ' · ' + esc(p.jiraKey)}</div></td>
                 <td><span class="badge ${p.area === 'CS' ? 'b-b' : 'b-t'}">${p.area}</span></td>
@@ -1418,7 +1427,7 @@ function ganttHTML(mode, live = true) {
     rows = D.pilots.map(p => {
       const pr = pilotProgress(p.id);
       const cls = p.rag === 'R' ? 'r' : p.rag === 'A' ? 'a' : p.rag === 'G' ? '' : 'n';
-      return `<tr><td class="nm"${live ? ` data-openpilot="${p.id}" style="cursor:pointer"` : ''}>
+      return `<tr${isActive(p) ? '' : ' style="opacity:.5"'}><td class="nm"${live ? ` data-openpilot="${p.id}" style="cursor:pointer"` : ''}>
           <div style="display:flex;gap:7px;align-items:center">
             <span class="rag ${p.rag}"></span>
             <div style="min-width:0"><div style="font-weight:600;font-size:12px">${esc(p.short)}</div>
@@ -1739,13 +1748,13 @@ function renderPilots() {
       style="display:flex;gap:9px;align-items:center;width:100%;text-align:left;font:inherit;cursor:pointer;
       border:1px solid ${x.id === selPilot ? 'color-mix(in srgb,var(--green) 40%,transparent)' : 'var(--line)'};
       background:${x.id === selPilot ? 'var(--green-soft)' : 'var(--surface)'};
-      border-radius:8px;padding:8px 10px">
+      border-radius:8px;padding:8px 10px;${isActive(x) ? '' : 'opacity:.55'}">
       <span class="rag ${x.rag}"></span>
       <span style="min-width:0;flex:1">
         <span style="display:block;font-size:12.5px;font-weight:600">${esc(x.short)}</span>
         ${x.projectName ? `<span style="display:block;font-size:10.5px;color:var(--green);
           font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.projectName)}</span>` : ''}
-        <span class="src mono">${x.id} · ${esc(x.area)}</span>
+        <span class="src mono">${x.id} · ${esc(x.area)}${isActive(x) ? '' : ' · not activated'}</span>
       </span>
       <span class="mono" style="font-size:11px;font-weight:700;color:var(--muted)">${xp.pct}%</span>
     </button>`;
@@ -1773,11 +1782,18 @@ function renderPilots() {
               ${esc(p.projectName)}${p.swf ? `<span class="src" style="font-weight:400"> · delivered with ${esc(p.swf)}</span>` : ''}</div>` : ''}
           </div>
           <div class="row">
+            <button class="btn sm ${isActive(p) ? 'primary' : ''}" data-pactive="${p.id}"
+              title="${isActive(p) ? 'Counting towards the wave — click to stand it down'
+                : 'Not counting towards the wave — click to activate it'}">${
+              isActive(p) ? '● Activated' : '○ Not activated'}</button>
             <span class="lbl" style="margin:0;align-self:center">RAG</span>
             ${ragSeg('prag', p.id, p.rag)}
           </div>
         </header>
         <div class="body">
+          ${isActive(p) ? '' : `<div class="note" style="margin-bottom:12px"><strong>This pilot is not activated.</strong>
+            Its activities, meetings and risks are all still here and editable, but it is left out of the wave
+            completion figure on the executive summary and the Friday report.</div>`}
           <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(128px,1fr))">
             <div class="tile"><div class="tl">Complete</div><div class="tv">${pr.pct}<small>%</small></div>
               <div class="ts">${pr.done} of ${pr.total} activities</div></div>
@@ -2644,7 +2660,7 @@ function renderReport() {
           <div class="tv">${f.milestonesMet.length}<small>/ ${D.milestones.length}</small></div>
           <div class="ts">${f.milestonesLate.length} overdue</div></div>
         <div class="tile"><div class="tl">Pilots active</div>
-          <div class="tv">${D.pilots.filter(p => p.rag !== 'N').length}<small>/ ${D.pilots.length}</small></div>
+          <div class="tv">${activePilots().length}<small>/ ${D.pilots.length}</small></div>
           <div class="ts">${D.pilots.filter(p => p.rag === 'R').length} red · ${D.pilots.filter(p => p.rag === 'A').length} amber</div></div>
         <div class="tile"><div class="tl">Open risks</div>
           <div class="tv">${f.risksOpen.length}<small>${f.risksHigh.length ? ' · ' + f.risksHigh.length + ' high' : ''}</small></div>
@@ -2661,7 +2677,9 @@ function renderReport() {
         <th>RAG</th><th>Commentary</th></tr></thead>
         <tbody>${D.pilots.map(p => {
           const pr = pilotProgress(p.id);
-          return `<tr><td><strong>${esc(p.short)}</strong><br><span class="src mono">${p.id} · ${esc(p.area)}</span></td>
+          return `<tr${isActive(p) ? '' : ' style="opacity:.6"'}>
+            <td><strong>${esc(p.short)}</strong>${isActive(p) ? '' : ' <span class="badge b-n">Not activated</span>'}
+            <br><span class="src mono">${p.id} · ${esc(p.area)}</span></td>
             <td>${esc(p.phase)}</td>
             <td class="r mono"><strong>${pr.pct}%</strong><br><span class="src">${pr.done}/${pr.total}</span></td>
             <td><span class="badge ${ragCls(p.rag)}">${p.rag === 'N' ? '—' : ragOf(p.rag)}</span></td>
@@ -3073,6 +3091,15 @@ document.addEventListener('click', e => {
   if (t.dataset.selpilot) { selPilot = t.dataset.selpilot; paint(); return; }
   if (t.dataset.openpilot) { openPilot(t.dataset.openpilot); return; }
   if (t.dataset.ptab) { pilotTab = t.dataset.ptab; paint(); return; }
+  if (t.dataset.pactive) {
+    const p = D.pilots.find(x => x.id === t.dataset.pactive); if (!p) return;
+    p.active = !isActive(p);
+    Store.save('pilots', p);
+    logUpdate(`${p.short} ${p.active ? 'activated' : 'stood down'}`,
+      p.active ? 'Counting towards the wave again.' : 'Left out of the wave completion figure.',
+      p.active ? 'g' : 'a', p.id);
+    paint(); return;
+  }
   if (t.dataset.prag) {
     const p = D.pilots.find(x => x.id === t.dataset.prag); if (!p) return;
     const was = p.rag;
