@@ -2440,7 +2440,8 @@ function riskTable(rows, title, addable) {
 /* ══ 9 · FRIDAY EXECUTIVE REPORT ═══════════════════════════════════
    Composed from the week's data, then edited. The narrative fields are
    the only thing typed; every figure comes from the other views.     */
-let RPT = null;   // the report being edited
+let RPT = null;        // the shared record for the week being viewed
+let RPTDATE = null;    // which reporting week — null means the current one
 
 function reportPeriod(dateStr) {
   let d = parse(dateStr) || new Date();
@@ -2515,20 +2516,40 @@ function reportTitle(r) {
     `${two(dt.getMonth() + 1)}.${two(dt.getDate())}.${dt.getFullYear()}`;
 }
 
-function newReport(dateStr) {
+/** Fill the three composed fields from the week's data — only ever on
+    request, from the Compose button. */
+function composeFields(r) {
+  const f = weekFacts(r.from, r.to);
+  r.headline = composeNarrative(f);
+  r.achievements = f.updates.filter(u => u.kind === 'g').map(u => u.what).join('\n') ||
+    f.results.map(x => `${x.pilot}: ${x.title}${x.metric ? ' — ' + x.metric : ''}`).join('\n');
+  r.nextWeek = f.sessionsNext.slice(0, 8).map(e => `${fmtD(e.date)} — ${e.title}`).join('\n');
+  return r;
+}
+
+/** The report for a reporting week, shared by everyone.
+    The id comes from the week ending date, so two people opening the same
+    week open the same record rather than each starting a private draft. */
+function reportFor(dateStr) {
   const { from, to } = reportPeriod(dateStr || todayISO());
-  const f = weekFacts(from, to);
-  const t = todayISO();
-  return {
-    id: uid('RPT'), from, to, week: f.wk, created: Date.now(), orient: 'portrait',
-    day: (t >= from && t <= to) ? t : from,
+  const id = 'RPT-' + to;
+  let r = (D.reports || []).find(x => x.id === id);
+  if (r) return r;
+  r = { id, from, to, week: clamp(weekOf(to) || 1, 1, D.meta.weeks), created: Date.now(),
+    orient: 'portrait', day: (todayISO() >= from && todayISO() <= to) ? todayISO() : from,
     rag: D.meta.overallRag, author: D.meta.deliveryLead,
-    headline: composeNarrative(f),
-    achievements: f.updates.filter(u => u.kind === 'g').map(u => u.what).join('\n') ||
-      f.results.map(r => `${r.pilot}: ${r.title}${r.metric ? ' — ' + r.metric : ''}`).join('\n'),
-    nextWeek: f.sessionsNext.slice(0, 8).map(e => `${fmtD(e.date)} — ${e.title}`).join('\n'),
-    decisions: '', asks: '',
-  };
+    headline: '', achievements: '', nextWeek: '', decisions: '', asks: '', by: '', at: 0 };
+  (D.reports = D.reports || []).push(r);
+  Store.save('reports', r);
+  return r;
+}
+
+/** Record who last touched it, then save — everyone else sees it on their
+    next sync, so the narrative is a shared document, not a private draft. */
+function touchReport(r) {
+  r.by = (Auth.user && Auth.user.name) || D.meta.whoAmI || '';
+  r.at = Date.now();
+  Store.save('reports', r);
 }
 
 /** The printed page box. `@page` cannot be toggled with a class, so the rule
@@ -2542,10 +2563,10 @@ function applyOrientation() {
 
 function renderReport() {
   const el = $('#panel-report');
-  if (!RPT) RPT = newReport();
+  RPT = reportFor(RPTDATE);
   const f = weekFacts(RPT.from, RPT.to);
   const P = f.progress;
-  const saved = D.reports.slice().sort((a, b) => b.created - a.created);
+  const saved = D.reports.slice().sort((a, b) => (b.to || '').localeCompare(a.to || ''));
 
   el.innerHTML = `
   <div class="noprint stack" style="margin-bottom:16px">
@@ -2564,28 +2585,30 @@ function renderReport() {
         <input type="text" data-rpt="author" value="${esc(RPT.author)}"></div>
       <span class="spacer"></span>
       <div class="row" style="align-self:flex-end">
-        <button class="btn" id="rptRecompose">Re-compose from data</button>
-        <button class="btn" id="rptSave">Save this week</button>
+        <button class="btn" id="rptRecompose">Compose from data</button>
         <button class="btn primary" id="rptPrint">Print / save as PDF</button>
       </div>
     </div></div></div>
 
     <div class="card"><header><h2>Narrative — the only part you write</h2>
-      <span class="hint">every figure below is pulled from the other views</span></header>
+      <span class="hint" id="rptWho">${RPT.at ? `saved · last edited by ${esc(RPT.by || 'someone')} on ${esc(fmtTs(RPT.at))}`
+        : 'saved as you type, and shared with everyone on the wave'}</span></header>
       <div class="body"><div class="grid g2">
         <div style="grid-column:1/-1"><span class="lbl">Headline — the paragraph the sponsor reads first</span>
-          <textarea data-rpt="headline" style="min-height:78px">${esc(RPT.headline)}</textarea></div>
+          <textarea data-rpt="headline" style="min-height:78px"
+            placeholder="Where the wave stands, what changed this week, what needs a decision.">${esc(RPT.headline)}</textarea></div>
         <div><span class="lbl">Achievements this week — one per line</span>
           <textarea data-rpt="achievements" style="min-height:96px" placeholder="What actually moved.">${esc(RPT.achievements)}</textarea></div>
         <div><span class="lbl">Next week — one per line</span>
-          <textarea data-rpt="nextWeek" style="min-height:96px">${esc(RPT.nextWeek)}</textarea></div>
+          <textarea data-rpt="nextWeek" style="min-height:96px"
+            placeholder="Sessions, gates and milestones ahead.">${esc(RPT.nextWeek)}</textarea></div>
         <div><span class="lbl">Decisions taken</span>
           <textarea data-rpt="decisions" placeholder="Decision · who took it · date.">${esc(RPT.decisions)}</textarea></div>
         <div><span class="lbl">Asks of the client — what we need, from whom, by when</span>
           <textarea data-rpt="asks" placeholder="Be specific: a name and a date, not 'support'.">${esc(RPT.asks)}</textarea></div>
       </div></div></div>
 
-    ${saved.length ? `<div class="card"><header><h2>Saved reports</h2>
+    ${saved.length ? `<div class="card"><header><h2>Report weeks</h2>
       <span class="hint">${saved.length}</span></header><div class="body tight">
       ${saved.slice(0, 8).map(r => `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line-soft)">
         <span class="chip mono">W${r.week}</span>
@@ -3198,17 +3221,10 @@ document.addEventListener('click', e => {
   if (t.dataset.rrag) { RPT.rag = t.dataset.rrag; paint(); return; }
   if (t.dataset.rorient) { RPT.orient = t.dataset.rorient; paint(); return; }
   if (t.id === 'rptRecompose') {
-    const keep = { decisions: RPT.decisions, asks: RPT.asks, author: RPT.author, rag: RPT.rag,
-      orient: RPT.orient, day: RPT.day };
-    RPT = { ...newReport(RPT.to), ...keep, id: RPT.id };
-    flash('Re-composed from the current data.'); paint(); return;
-  }
-  if (t.id === 'rptSave') {
-    const i = D.reports.findIndex(r => r.id === RPT.id);
-    if (i >= 0) D.reports[i] = { ...RPT }; else D.reports.push({ ...RPT });
-    Store.save('reports', RPT);
-    logUpdate('Weekly report saved', 'Week ending ' + fmtD(RPT.to), 'b', 'W' + RPT.week);
-    flash('Report saved.'); paint(); return;
+    if ((RPT.headline || RPT.achievements || RPT.nextWeek) &&
+      !confirm('Replace the headline, achievements and next week with text composed from the data?')) return;
+    composeFields(RPT); touchReport(RPT);
+    flash('Composed from the data — edit or clear it as you like.'); paint(); return;
   }
   if (t.id === 'rptPrint') {
     applyOrientation();
@@ -3223,10 +3239,11 @@ document.addEventListener('click', e => {
   }
   if (t.dataset.loadrpt) {
     const r = D.reports.find(x => x.id === t.dataset.loadrpt);
-    if (r) { RPT = { ...r }; paint(); } return;
+    if (r) { RPTDATE = r.to; paint(); } return;
   }
   if (t.dataset.delrpt) {
-    if (!confirm('Delete this saved report?')) return;
+    if (!confirm('Delete this week\'s report for everyone? The narrative written for it is lost.')) return;
+    if (t.dataset.delrpt === RPT.id) RPTDATE = null;
     D.reports = D.reports.filter(x => x.id !== t.dataset.delrpt);
     Store.remove('reports', t.dataset.delrpt); paint(); return;
   }
@@ -3249,12 +3266,12 @@ document.addEventListener('click', e => {
     D.deliverables.forEach(d => { d.status = 'not-started'; d.pct = 0; d.rag = 'N'; d.evidence = ''; Store.save('deliverables', d); });
     D.changeStreams.forEach(c => { c.pct = 0; c.rag = 'N'; Store.save('changeStreams', c); });
     D.meta.overallRag = 'N'; D.meta.ragNote = ''; Store.saveMeta();
-    RPT = null; flash('Progress cleared.'); paint(); return;
+    RPT = null; RPTDATE = null; flash('Progress cleared.'); paint(); return;
   }
   if (t.id === 'resetAll') {
     if (!confirm('Reset everything to the seeded Wave 1 plan? All your data is lost.')) return;
     if (!confirm('Last check — export a backup first if you might want it back.')) return;
-    replaceModel(freshData()); RPT = null; flash('Reset to the seeded plan.'); paint(); return;
+    replaceModel(freshData()); RPT = null; RPTDATE = null; flash('Reset to the seeded plan.'); paint(); return;
   }
 });
 
@@ -3265,7 +3282,7 @@ document.addEventListener('change', e => {
   if (el.id === 'fphase') { F.phase = el.value; paint(); return; }
   if (el.id === 'fowner') { F.owner = el.value; paint(); return; }
   if (el.id === 'calFilter') { CalFilter = el.value; paint(); return; }
-  if (el.id === 'rptTo') { RPT = newReport(el.value); paint(); return; }
+  if (el.id === 'rptTo') { RPTDATE = el.value; paint(); return; }
   if (el.id === 'rptDay') { RPT.day = el.value; paint(); return; }
   if (el.dataset.w && el.dataset.wf) { writeWork(el, true); return; }
   if (el.dataset.ev && el.dataset.evf) { writeRec('events', el.dataset.ev, el.dataset.evf, el, true); return; }
@@ -3297,7 +3314,14 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'fq') { F.q = el.value; repaintBoardOnly(); return; }
-  if (el.dataset.rpt) { RPT[el.dataset.rpt] = el.value; return; }
+  if (el.dataset.rpt) {
+    const r = (D.reports || []).find(x => x.id === RPT.id) || RPT;
+    r[el.dataset.rpt] = el.value;
+    touchReport(r);
+    const lbl = $('#rptWho');
+    if (lbl) lbl.textContent = 'saving…';
+    return;
+  }
   if (el.dataset.w && el.dataset.wf) { writeWork(el, false); return; }
   if (el.dataset.log && el.dataset.logid) {
     const l = pilotLog(selPilot), row = (l[el.dataset.log] || []).find(x => x.id === el.dataset.logid);
