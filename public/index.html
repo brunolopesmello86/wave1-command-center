@@ -544,6 +544,13 @@ let D = null;
 const COLL = ['pilots', 'milestones', 'deliverables', 'events', 'risks', 'work',
   'changeStreams', 'training', 'trainees', 'participants', 'checklist', 'kpis', 'stakeholders', 'updates', 'reports', 'pilotLogs'];
 const SINGLE = ['meta', 'activityTemplate'];
+/* collections whose id carries their reading order — P01…P10, D1…D6, and so
+   on. The store returns rows by when they last changed, so these are sorted
+   back into order whenever a load or a sync brings them in. */
+const ID_SORTED = ['pilots', 'milestones', 'deliverables', 'changeStreams', 'training', 'kpis', 'stakeholders'];
+function sortById() {
+  for (const c of ID_SORTED) if (Array.isArray(D[c])) D[c].sort(by('id'));
+}
 
 function freshData() { return JSON.parse(JSON.stringify(SEED)); }
 
@@ -776,6 +783,7 @@ const Store = {
       if (i < 0) { list.push(rec); changed = true; }
       else if (canon(list[i]) !== canon(rec)) { list[i] = rec; changed = true; }
     }
+    if (changed) sortById();
     return changed;
   },
   async poll() {
@@ -880,6 +888,7 @@ const Store = {
     for (const c of COLL) {
       db.collection(c).onSnapshot(snap => {
         D[c] = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        sortById();
         paint();
       }, e => console.warn(c, e.code));
     }
@@ -908,6 +917,7 @@ const Store = {
       // a stored copy from an older build would otherwise keep its stale plan
       // for ever, because restoring it skips the seed entirely
       if ((d.planVersion || 1) < PLAN_VERSION) migratePlan(d.planVersion || 1);
+      sortById();
     } catch (_) {}
   },
   saveLocalNow() {
@@ -1807,7 +1817,10 @@ function renderPilots() {
               <div class="ts">${log.learnings.length} learnings captured</div></div>
           </div>
           <div style="margin-top:13px">${bar(pr.pct, pr.blocked ? 'r' : '', 'lg')}</div>
-          <div class="grid g2" style="margin-top:13px">
+          <div class="grid g3" style="margin-top:13px">
+            <div><span class="lbl">Project — shows on the board, the report and the rail</span>
+              <input type="text" data-p="${p.id}" data-pf="projectName" value="${esc(p.projectName || '')}"
+                placeholder="The named initiative this pilot runs on"></div>
             <div><span class="lbl">Current phase</span>
               <select data-p="${p.id}" data-pf="phase">${opts(PHASES, p.phase)}</select></div>
             <div><span class="lbl">Next step — shows on the executive view</span>
@@ -2679,7 +2692,8 @@ function renderReport() {
           const pr = pilotProgress(p.id);
           return `<tr${isActive(p) ? '' : ' style="opacity:.6"'}>
             <td><strong>${esc(p.short)}</strong>${isActive(p) ? '' : ' <span class="badge b-n">Not activated</span>'}
-            <br><span class="src mono">${p.id} · ${esc(p.area)}</span></td>
+            ${p.projectName ? `<br><span style="color:var(--green);font-weight:600">${esc(p.projectName)}</span>` : ''}
+            <br><span class="src mono">${p.id} · ${esc(p.area)}${p.jiraRef ? ' · ' + esc(p.jiraRef) : ''}</span></td>
             <td>${esc(p.phase)}</td>
             <td class="r mono"><strong>${pr.pct}%</strong><br><span class="src">${pr.done}/${pr.total}</span></td>
             <td><span class="badge ${ragCls(p.rag)}">${p.rag === 'N' ? '—' : ragOf(p.rag)}</span></td>
