@@ -809,6 +809,7 @@ tbody tr:hover{background:var(--surface-2)}
 @media print{
   .doc{border:0;border-radius:0;max-width:none;padding:0}
   .doc-head{padding:13mm 13mm 9mm;margin:0}
+  .doc-head .ragbox{box-shadow:none;border:1px solid rgba(0,0,0,.08)}
   .doc-head h2{font-size:17px}
   .doc-body{padding:0 13mm}
   .doc-sec.band{margin-left:0;margin-right:0;padding:12px 14px 14px}
@@ -3403,18 +3404,8 @@ function renderReport() {
   <div class="doc${(RPT.layout || 'one') !== 'one' && RPT.orient === 'landscape' ? ' landscape' : ''}${
     (RPT.layout || 'one') === 'one' ? ' one sheet' : ''}" id="reportDoc">
     ${(RPT.layout || 'one') === 'one' ? reportOnePager(f) : `
-    <div class="doc-head">
-      <div>
-        <div class="eyebrow">${esc(D.meta.supplier)} · ${esc(D.meta.client)}</div>
-        <h2>${esc(reportTitle(RPT))}</h2>
-        <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">
-          Week ${f.wk} of ${D.meta.weeks} · reporting period ${esc(fmtDL(RPT.from))} to ${esc(fmtDL(RPT.to))}</p>
-      </div>
-      <div class="ragbox">
-        <span class="rg" style="background:${RPT.rag === 'G' ? 'var(--green)' : RPT.rag === 'A' ? 'var(--amber)' : RPT.rag === 'R' ? 'var(--rose)' : 'var(--faint)'}"></span>
-        <div><div class="rl">Overall status</div><div class="rv">${ragOf(RPT.rag)}</div></div>
-      </div>
-    </div>
+    ${docBanner(f)}
+    <div class="doc-body">
 
     <div class="doc-sec"><h3>Summary</h3>
       <p>${esc(RPT.headline) || '<span style="color:var(--faint)">No headline written.</span>'}</p>
@@ -3520,10 +3511,9 @@ function renderReport() {
       <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-2)">
         ${RPT.asks.split('\n').filter(Boolean).map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>` : ''}
 
-    <div class="doc-foot">
-      <span>${esc(D.meta.projectName)} · Week ${f.wk} of ${D.meta.weeks} · reporting period ${esc(fmtD(RPT.from))} – ${esc(fmtD(RPT.to))}</span>
-      <span>Prepared by ${esc(RPT.author || '—')} · ${esc(D.meta.supplier)}</span>
-    </div>`}
+    </div>
+    ${docFooter(f)}
+`}
   </div>`;
   applyOrientation();
 }
