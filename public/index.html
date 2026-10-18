@@ -440,6 +440,177 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
   tr,.fitem,.erow{break-inside:avoid}
 }
 </style>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   Visual layer. Presentation only — no rule here changes what the app
+   does, only how it reads. Loaded last so it wins without having to
+   edit the rules above.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --nav:#0E2744; --nav-2:#0A1E35; --nav-3:#143257;
+  --nav-line:rgba(255,255,255,.14);
+  --nav-ink:#EAF2FA; --nav-ink-2:#A9C0DA;
+  --mint:#7FD9C9;
+}
+
+/* ── masthead ───────────────────────────── */
+.masthead{background:linear-gradient(135deg,var(--nav-2),var(--nav) 58%,var(--nav-3));
+  border-bottom:0;box-shadow:inset 0 -1px 0 var(--nav-line)}
+.masthead .wrap{padding-block:15px}
+.masthead .eyebrow{color:var(--mint);letter-spacing:.17em;font-size:9.5px}
+.masthead h1{color:#fff;font-size:20px;letter-spacing:-.02em}
+.mark{background:linear-gradient(140deg,var(--green-bright),var(--green));
+  box-shadow:0 2px 10px rgba(0,0,0,.35);width:38px;height:38px;border-radius:11px;font-size:14px}
+.masthead .pill{background:rgba(255,255,255,.08);border-color:var(--nav-line);color:var(--nav-ink-2);
+  padding:6px 12px;font-size:11px}
+.masthead .pill b,.masthead .pill strong{color:#fff;font-weight:700}
+.masthead .pill.live{background:rgba(0,161,66,.18);border-color:rgba(85,212,128,.5);color:#9FE8B8}
+.masthead .pill.live .dot{background:var(--green-bright);box-shadow:0 0 0 3px rgba(85,212,128,.22)}
+.masthead .pill.warn{background:rgba(228,169,69,.16);border-color:rgba(228,169,69,.5);color:#F2CE8C}
+
+/* the wave status reads as a verdict, not a label */
+#ragPill{font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:10.5px;padding:7px 14px}
+#ragPill.rag-G{background:var(--green);border-color:var(--green-bright);color:#fff}
+#ragPill.rag-A{background:var(--amber);border-color:#E9B457;color:#231403}
+#ragPill.rag-R{background:var(--rose);border-color:#E58076;color:#fff}
+#ragPill.rag-G .dot,#ragPill.rag-R .dot{background:#fff}
+#ragPill.rag-A .dot{background:#231403}
+
+/* who is signed in */
+#userPill{gap:8px;padding:5px 12px 5px 5px;background:rgba(255,255,255,.08);border-color:var(--nav-line);color:#fff}
+#userPill .uav{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:linear-gradient(140deg,var(--green-bright),var(--green));color:#fff;
+  font-size:9.5px;font-weight:800;letter-spacing:.02em}
+#userPill .dot{display:none}
+
+/* ── tab bar ────────────────────────────── */
+.tabbar{background:var(--nav);border-bottom:0;box-shadow:inset 0 -1px 0 var(--nav-line)}
+.tab{color:var(--nav-ink-2);padding:13px 15px 11px;font-size:13px;border-bottom-width:3px}
+.tab:hover{color:#fff;background:rgba(255,255,255,.06)}
+.tab[aria-selected="true"]{color:#fff;background:transparent;border-bottom-color:var(--green-bright)}
+.tab .cnt{background:rgba(255,255,255,.13);color:var(--nav-ink);font-size:10px;padding:2px 6px}
+.tab[aria-selected="true"] .cnt{background:var(--green-bright);color:#06240F}
+
+/* ── surfaces ───────────────────────────── */
+body{background:var(--bg)}
+.card{border-radius:12px;border-color:var(--line-soft);
+  box-shadow:0 1px 2px rgba(18,36,26,.04),0 10px 24px -18px rgba(18,36,26,.28)}
+.card>header{padding:12px 15px;background:linear-gradient(var(--surface),var(--surface-2))}
+.card>header h2,.card>header h3{letter-spacing:-.005em}
+/* a card can carry its subject's RAG as a top edge */
+.card.rag-top{border-top:3px solid var(--line);padding-top:0}
+.card.rag-top.r{border-top-color:var(--rose)}
+.card.rag-top.a{border-top-color:var(--amber)}
+.card.rag-top.g{border-top-color:var(--green)}
+.card.rag-top.n{border-top-color:var(--faint)}
+
+/* ── stat tiles ─────────────────────────── */
+.tile{border-radius:11px;border-color:var(--line-soft);transition:box-shadow .14s,transform .14s}
+.tile .tl{font-size:9.5px;letter-spacing:.12em}
+.tile .tv{font-size:27px;letter-spacing:-.03em}
+.tile.acc{border-left-width:3px}
+/* a tile that is carrying bad news says so with its whole surface */
+.tile.hot{background:var(--rose-soft);border-color:color-mix(in srgb,var(--rose) 35%,transparent)}
+.tile.hot .tl,.tile.hot .tv,.tile.hot .ts{color:var(--rose)}
+.tile.hot .ts{font-weight:600}
+.tile.warmish{background:var(--amber-soft);border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
+.tile.warmish .tl,.tile.warmish .tv{color:var(--amber)}
+
+/* ── buttons ────────────────────────────── */
+.btn{border-radius:8px;font-weight:600}
+.btn.primary{box-shadow:0 1px 2px rgba(0,122,50,.3)}
+.seg{border-radius:8px}
+.seg button{padding:5px 11px;transition:background .12s,color .12s}
+
+/* RAG as three named choices rather than three letters */
+.seg.rag3 button{padding:6px 14px;font-size:11px;letter-spacing:.08em;font-weight:800}
+
+/* ── sub-tabs: underlined, like the main bar ── */
+.subtabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:0 -15px;padding:0 15px}
+.subtabs button{border:0;background:none;padding:10px 12px 9px;font:inherit;font-size:12.5px;font-weight:600;
+  color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;display:flex;align-items:center;gap:7px;
+  white-space:nowrap;margin-bottom:-1px}
+.subtabs button:hover{color:var(--ink)}
+.subtabs button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--green-bright)}
+.subtabs .cnt{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;
+  background:var(--surface-3);color:var(--muted)}
+.subtabs button[aria-pressed="true"] .cnt{background:var(--green-soft);color:var(--green)}
+
+/* ── the pilot rail ─────────────────────── */
+.railrow{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 9px;
+  align-items:center;width:100%;text-align:left;font:inherit;cursor:pointer;border:1px solid var(--line-soft);
+  background:var(--surface);border-radius:10px;padding:9px 11px;transition:border-color .12s,background .12s}
+.railrow:hover{border-color:var(--faint)}
+.railrow.sel{border-color:color-mix(in srgb,var(--green) 45%,transparent);background:var(--green-soft)}
+.railrow.sel::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;
+  border-radius:0 3px 3px 0;background:var(--green)}
+.railrow.off{opacity:.62}
+.railrow .rname{font-size:13px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.railrow .rproj{grid-column:2;font-size:11px;font-weight:600;color:var(--green);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.railrow.off .rproj{color:var(--muted);font-style:italic;font-weight:500}
+.railrow .rpct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted);align-self:start}
+.railrow .rfoot{grid-column:2/-1;display:flex;align-items:center;gap:8px}
+.railrow .rmeta{font-family:var(--mono);font-size:10px;color:var(--faint);flex:none}
+.railrow .rbar{flex:1;height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden;min-width:30px}
+.railrow .rbar i{display:block;height:100%;border-radius:2px;background:var(--green)}
+.railrow .roff{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
+  padding:1px 6px;border-radius:4px;background:var(--surface-3);color:var(--faint);flex:none}
+
+/* ── activation switch ──────────────────── */
+.swtoggle{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--surface);
+  border-radius:999px;padding:4px 13px 4px 5px;cursor:pointer;font:inherit}
+.swtoggle:hover{border-color:var(--faint)}
+.swtoggle .track{width:34px;height:19px;border-radius:999px;background:var(--surface-3);flex:none;
+  position:relative;transition:background .16s}
+.swtoggle .track::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .16s}
+.swtoggle[aria-checked="true"] .track{background:var(--green)}
+.swtoggle[aria-checked="true"] .track::after{transform:translateX(15px)}
+.swtoggle .swlabel{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.swtoggle[aria-checked="true"] .swlabel{color:var(--green)}
+
+/* ── empty states ───────────────────────── */
+.empty{padding:26px 18px;display:flex;gap:14px;align-items:flex-start;text-align:left;
+  background:var(--surface-2);border:1px dashed var(--line);border-radius:10px;margin:2px}
+.empty::before{content:"";flex:none;width:34px;height:34px;border-radius:9px;background:var(--surface-3);
+  background-image:linear-gradient(var(--faint),var(--faint)),linear-gradient(var(--faint),var(--faint)),
+    linear-gradient(var(--faint),var(--faint));
+  background-size:16px 2px,16px 2px,10px 2px;background-position:9px 12px,9px 17px,9px 22px;
+  background-repeat:no-repeat;opacity:.55}
+.empty strong{margin-bottom:3px}
+
+/* ── pilot pane: content beside the glance panel ── */
+.pilotpane{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;align-items:start}
+.pilotpane>*{min-width:0}
+@media (max-width:1180px){.pilotpane{grid-template-columns:1fr}}
+
+/* ── at a glance ────────────────────────── */
+.glance dl{margin:0}
+.glance .grow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.glance .grow:last-child{border-bottom:0}
+.glance .gk{font-size:11.5px;color:var(--muted)}
+.glance .gv{font-size:12px;font-weight:700;text-align:right}
+.glance .gv.none{font-weight:500;color:var(--faint);font-style:italic}
+.glance .galert{margin-top:12px;border-radius:9px;padding:10px 12px;background:var(--rose-soft);
+  border:1px solid color-mix(in srgb,var(--rose) 28%,transparent)}
+.glance .galert .galert-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--rose);margin-bottom:4px}
+.glance .galert p{margin:0;font-size:11.5px;color:var(--ink-2);line-height:1.45}
+
+/* ── tables ─────────────────────────────── */
+th{letter-spacing:.11em;background:var(--surface-2)}
+tbody tr:hover{background:var(--surface-2)}
+
+/* ── notes ──────────────────────────────── */
+.note{border-radius:9px;border-left-width:3px;padding:11px 13px}
+.note strong{font-weight:700}
+
+/* ── the chrome stays dark whatever the OS says ── */
+@media print{.masthead,.tabbar{display:none!important}}
+
+</style>
 </head>
 <body>
 <header class="masthead">
@@ -455,7 +626,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
       <span class="pill" id="weekPill"><span class="dot"></span><span id="weekTxt">Week —</span></span>
       <span class="pill" id="ragPill"><span class="dot"></span><span id="ragTxt">Status —</span></span>
       <span class="pill" id="syncPill"><span class="dot"></span><span id="syncTxt">Local</span></span>
-      <span class="pill" id="userPill" hidden title="Signed in — manage your account under Data &amp; setup"><span class="dot"></span><span id="userTxt"></span></span>
+      <span class="pill" id="userPill" hidden title="Signed in — manage your account under Data &amp; setup"><span id="userTxt" style="display:flex;align-items:center;gap:8px"></span></span>
     </div>
   </div>
 </header>
@@ -1082,9 +1253,11 @@ function opts(list, sel) {
     return `<option value="${esc(v)}"${String(v) === String(sel) ? ' selected' : ''}>${esc(l)}</option>`;
   }).join('');
 }
-function ragSeg(attr, id, cur) {
-  return `<div class="seg" role="group" aria-label="RAG status">${['G', 'A', 'R'].map(v =>
-    `<button type="button" data-${attr}="${esc(id)}" data-v="${v}" aria-pressed="${cur === v}">${v}</button>`).join('')}</div>`;
+function ragSeg(attr, id, cur, named) {
+  const L = { G: 'Green', A: 'Amber', R: 'Red' };
+  return `<div class="seg${named ? ' rag3' : ''}" role="group" aria-label="RAG status">${['G', 'A', 'R'].map(v =>
+    `<button type="button" data-${attr}="${esc(id)}" data-v="${v}" aria-pressed="${cur === v}">${
+      named ? L[v].toUpperCase() : v}</button>`).join('')}</div>`;
 }
 function bar(pct, cls = '') {
   return `<div class="bar ${cls}"><i style="width:${clamp(pct || 0, 0, 100)}%"></i></div>`;
@@ -1166,7 +1339,7 @@ function renderExec() {
       <div class="tile acc"><div class="tl">Milestones met</div>
         <div class="tv">${msDone}<small>/ ${ms.length}</small></div>
         <div class="ts">${nextMs ? `Next: ${nextMs.id} · ${weekLabel(nextMs.week)}` : 'All milestones met'}</div></div>
-      <div class="tile acc ${highRisks.length ? 'r' : 'a'}"><div class="tl">Open risks</div>
+      <div class="tile ${highRisks.length ? 'hot' : openRisks.length ? 'warmish' : ''}"><div class="tl">Open risks</div>
         <div class="tv">${openRisks.length}<small>${highRisks.length ? ` · ${highRisks.length} high` : ''}</small></div>
         <div class="ts">${blocked.length} blocked activit${blocked.length === 1 ? 'y' : 'ies'}</div></div>
       <div class="tile acc"><div class="tl">Deliverables on track</div>
@@ -1738,6 +1911,7 @@ function meetingTracker() {
    results measured and what was learned.                            */
 let selPilot = null;
 let pilotTab = 'progress';
+let railFilter = 'all';   // which pilots the rail lists — all, active or stood down
 
 function renderPilots() {
   const el = $('#panel-pilots');
@@ -1752,23 +1926,22 @@ function renderPilots() {
   const pilotEvents = D.events.filter(e => e.pilot === p.id || e.title.includes(p.short))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const rail = D.pilots.map(x => {
+  const shown = D.pilots.filter(x => railFilter === 'all' || (railFilter === 'active') === isActive(x));
+  const nOn = activePilots().length, nOff = D.pilots.length - nOn;
+  const rail = shown.map(x => {
     const xp = pilotProgress(x.id);
-    return `<button class="sessrow-p ${x.id === selPilot ? 'sel' : ''}" data-selpilot="${x.id}"
-      style="display:flex;gap:9px;align-items:center;width:100%;text-align:left;font:inherit;cursor:pointer;
-      border:1px solid ${x.id === selPilot ? 'color-mix(in srgb,var(--green) 40%,transparent)' : 'var(--line)'};
-      background:${x.id === selPilot ? 'var(--green-soft)' : 'var(--surface)'};
-      border-radius:8px;padding:8px 10px;${isActive(x) ? '' : 'opacity:.55'}">
+    return `<button class="railrow ${x.id === selPilot ? 'sel' : ''} ${isActive(x) ? '' : 'off'}" data-selpilot="${x.id}">
       <span class="rag ${x.rag}"></span>
-      <span style="min-width:0;flex:1">
-        <span style="display:block;font-size:12.5px;font-weight:600">${esc(x.short)}</span>
-        ${x.projectName ? `<span style="display:block;font-size:10.5px;color:var(--green);
-          font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.projectName)}</span>` : ''}
-        <span class="src mono">${x.id} · ${esc(x.area)}${isActive(x) ? '' : ' · not activated'}</span>
+      <span class="rname">${esc(x.short)}</span>
+      <span class="rpct">${xp.pct}%</span>
+      ${x.projectName ? `<span class="rproj">${esc(x.projectName)}</span>` : ''}
+      <span class="rfoot">
+        <span class="rmeta">${x.id} · ${esc(x.area)}</span>
+        <span class="rbar"><i style="width:${xp.pct}%"></i></span>
+        ${isActive(x) ? '' : '<span class="roff">OFF</span>'}
       </span>
-      <span class="mono" style="font-size:11px;font-weight:700;color:var(--muted)">${xp.pct}%</span>
     </button>`;
-  }).join('');
+  }).join('') || '<p class="src" style="margin:4px 2px">No pilots in this view.</p>';
 
   const tabs = [['progress', 'Progress'], ['checklist', 'Checklist', checkDone(p.id) + '/' + CHECKLIST.length],
     ['participants', 'Participants', pilotParticipants(p.id).length],
@@ -1778,41 +1951,48 @@ function renderPilots() {
 
   el.innerHTML = `<div style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;align-items:start">
     <div class="stack noprint">
-      <div class="card"><header><h3>Pilots</h3><span class="hint">${D.pilots.length}</span></header>
-        <div class="body tight" style="display:grid;gap:6px">${rail}</div></div>
+      <div class="card"><header><h3>Pilots</h3>
+          <span class="hint">${nOn} active${nOff ? ` · ${nOff} off` : ''}</span></header>
+        <div class="body tight" style="display:grid;gap:8px">
+          <div class="seg" style="width:100%">${[['all', 'All'], ['active', 'Active'], ['off', 'Off']].map(([k, l]) =>
+            `<button type="button" data-rail="${k}" aria-pressed="${railFilter === k}" style="flex:1">${l}</button>`).join('')}</div>
+          ${rail}
+        </div></div>
     </div>
 
     <div class="stack">
-      <div class="card">
+      <div class="card rag-top ${p.rag === 'R' ? 'r' : p.rag === 'A' ? 'a' : p.rag === 'G' ? 'g' : 'n'}">
         <header>
           <div style="min-width:0">
-            <div class="src mono">${p.id} · ${esc(p.jiraKey)}${p.jiraRef ? ' · ' + esc(p.jiraRef) : ''} · ${esc(p.type)}</div>
-            <h2 style="font-size:17px;margin-top:2px">${esc(p.name)}</h2>
+            <div class="src mono">${p.id} · ${esc(p.jiraKey)}${p.jiraRef ? ' · ' + esc(p.jiraRef) : ''} · ${esc(p.type)} · ${esc(p.area)}</div>
+            <h2 style="font-size:19px;margin-top:3px">${esc(p.name)}</h2>
             ${p.projectName ? `<div style="font-size:13px;font-weight:600;color:var(--green);margin-top:2px">
               ${esc(p.projectName)}${p.swf ? `<span class="src" style="font-weight:400"> · delivered with ${esc(p.swf)}</span>` : ''}</div>` : ''}
           </div>
           <div class="row">
-            <button class="btn sm ${isActive(p) ? 'primary' : ''}" data-pactive="${p.id}"
-              title="${isActive(p) ? 'Counting towards the wave — click to stand it down'
-                : 'Not counting towards the wave — click to activate it'}">${
-              isActive(p) ? '● Activated' : '○ Not activated'}</button>
+            <button class="swtoggle" data-pactive="${p.id}" role="switch" aria-checked="${isActive(p)}"
+              title="${isActive(p) ? 'Counting towards the wave — switch off to stand it down'
+                : 'Not counting towards the wave — switch on to activate it'}">
+              <span class="track"></span><span class="swlabel">${isActive(p) ? 'Activated' : 'Not activated'}</span></button>
             <span class="lbl" style="margin:0;align-self:center">RAG</span>
-            ${ragSeg('prag', p.id, p.rag)}
+            ${ragSeg('prag', p.id, p.rag, true)}
           </div>
         </header>
         <div class="body">
-          ${isActive(p) ? '' : `<div class="note" style="margin-bottom:12px"><strong>This pilot is not activated.</strong>
-            Its activities, meetings and risks are all still here and editable, but it is left out of the wave
-            completion figure on the executive summary and the Friday report.</div>`}
+          ${isActive(p) ? '' : `<div class="note" style="margin-bottom:12px"><strong>Not activated.</strong>
+            Activities, meetings and risks stay here and stay editable, but this pilot is left out of the wave
+            completion figure on the executive summary and the Friday report.
+            <button class="btn sm" data-pactive="${p.id}" style="margin-left:6px">Activate it</button></div>`}
           <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(128px,1fr))">
             <div class="tile"><div class="tl">Complete</div><div class="tv">${pr.pct}<small>%</small></div>
               <div class="ts">${pr.done} of ${pr.total} activities</div></div>
             <div class="tile"><div class="tl">In flight</div><div class="tv">${pr.active}</div>
               <div class="ts">in progress or review</div></div>
-            <div class="tile ${pr.blocked ? 'acc r' : ''}"><div class="tl">Blocked</div>
+            <div class="tile ${pr.blocked ? 'hot' : ''}"><div class="tl">Blocked</div>
               <div class="tv">${pr.blocked}</div><div class="ts">${pr.blocked ? 'needs escalation' : 'nothing blocked'}</div></div>
-            <div class="tile ${pilotRisks.length ? 'acc a' : ''}"><div class="tl">Open risks</div>
-              <div class="tv">${pilotRisks.length}</div><div class="ts">${pilotRisks.filter(r => r.sev === 'H').length} high</div></div>
+            <div class="tile ${pilotRisks.some(r => r.sev === 'H') ? 'warmish' : ''}"><div class="tl">Open risks</div>
+              <div class="tv">${pilotRisks.length}</div><div class="ts">${
+                pilotRisks.filter(r => r.sev === 'H').length ? pilotRisks.filter(r => r.sev === 'H').length + ' at high severity' : 'none at high severity'}</div></div>
             <div class="tile"><div class="tl">Meetings held</div><div class="tv">${log.meetings.length}</div>
               <div class="ts">${log.learnings.length} learnings captured</div></div>
           </div>
@@ -1832,16 +2012,20 @@ function renderPilots() {
         </div>
       </div>
 
-      <div class="card noprint"><div class="body tight"><div class="row">
-        <div class="seg">${tabs.map(([k, l, n]) => `<button type="button" data-ptab="${k}"
-          aria-pressed="${pilotTab === k}">${l}${n !== undefined ? ` (${n})` : ''}</button>`).join('')}</div>
-      </div></div></div>
+      <div class="card noprint"><div class="body tight" style="padding-bottom:0">
+        <div class="subtabs">${tabs.map(([k, l, n]) => `<button type="button" data-ptab="${k}"
+          aria-pressed="${pilotTab === k}">${l}${n !== undefined ? `<span class="cnt">${n}</span>` : ''}</button>`).join('')}</div>
+      </div></div>
 
-      ${pilotTab === 'progress' ? pilotProgressPane(p, items, blocked, pilotEvents)
-        : pilotTab === 'checklist' ? pilotChecklistPane(p)
-        : pilotTab === 'participants' ? pilotParticipantsPane(p)
-        : pilotTab === 'team' ? pilotTeamPane(p)
-        : pilotLogPane(p, log, pilotTab)}
+      <div class="pilotpane">
+        ${pilotTab === 'progress' ? pilotProgressPane(p, items, blocked, pilotEvents)
+          : pilotTab === 'checklist' ? pilotChecklistPane(p)
+          : pilotTab === 'participants' ? pilotParticipantsPane(p)
+          : pilotTab === 'team' ? pilotTeamPane(p)
+          : pilotLogPane(p, log, pilotTab)}
+        ${atAGlance(p, pr, blocked)}
+      </div></div>
+
     </div>
   </div>`;
 }
@@ -1951,6 +2135,29 @@ function pilotParticipantsPane(p) {
         <div class="row" style="gap:5px">${known.map((k, i) => `<button class="btn sm" data-addknown="${p.id}" data-ki="${i}"
           title="${esc(k.role)} · from the ${esc(k.from)}">＋ ${esc(k.name)}</button>`).join('')}</div></div>` : ''}
     </div></div>`;
+}
+
+/** The facts a reader wants without opening Team & scope, plus whatever is
+    on fire. Presentation only — every value already exists on the pilot. */
+function atAGlance(p, pr, blocked) {
+  const row = (k, v, fallback) => `<div class="grow"><span class="gk">${esc(k)}</span>
+    <span class="gv${v ? '' : ' none'}">${esc(v || fallback)}</span></div>`;
+  const stuck = blocked.slice(0, 2);
+  return `<aside class="card glance"><header><h3>At a glance</h3></header>
+    <div class="body tight">
+      ${row('Board', p.jiraKey, 'not set')}
+      ${row('Jira project', p.jiraRef, 'not linked')}
+      ${row('Type', p.type, '—')}
+      ${row('Area', p.area, '—')}
+      ${row('Product owner', (p.productMgr || '').split('—')[0].trim().replace(/^TBD.*/i, ''), 'unassigned')}
+      ${row('Delivery partner', p.swf, '—')}
+      ${row('Deployment window', (p.deployWindow || '').split('—')[0].trim(), '—')}
+      ${stuck.length ? `<div class="galert">
+        <div class="galert-k">${blocked.length} blocked activit${blocked.length === 1 ? 'y' : 'ies'}</div>
+        ${stuck.map(w => `<p>${esc(w.act)} ${esc(w.title)}${w.blocker ? ' — ' + esc(w.blocker) : ' — no blocker recorded'}</p>`).join('')}
+        ${blocked.length > 2 ? `<p style="margin-top:5px;color:var(--faint)">+ ${blocked.length - 2} more</p>` : ''}
+      </div>` : ''}
+    </div></aside>`;
 }
 
 function pilotTeamPane(p) {
@@ -2318,8 +2525,9 @@ function renderChange() {
         <div class="tv">${D.kpis.filter(k => k.actual).length}<small>/ ${D.kpis.length}</small></div>
         <div class="ts">first reading is the baseline</div></div>
     </div>
-    <div class="card noprint"><div class="body tight"><div class="seg">${tabs.map(([k, l]) =>
-      `<button type="button" data-chgtab="${k}" aria-pressed="${chgTab === k}">${l}</button>`).join('')}</div></div></div>
+    <div class="card noprint"><div class="body tight" style="padding-bottom:0">
+      <div class="subtabs">${tabs.map(([k, l]) =>
+        `<button type="button" data-chgtab="${k}" aria-pressed="${chgTab === k}">${l}</button>`).join('')}</div></div></div>
     ${pane}
   </div>`;
 }
@@ -2999,10 +3207,10 @@ function paint() {
     if (p) p.hidden = !on;
   }
   const wk = currentWeek();
-  $('#weekTxt').textContent = `Week ${wk} of ${D.meta.weeks}`;
-  $('#ragTxt').textContent = 'Status ' + ragOf(D.meta.overallRag);
-  const rp = $('#ragPill');
-  rp.className = 'pill' + (D.meta.overallRag === 'G' ? ' live' : D.meta.overallRag === 'N' ? '' : ' warn');
+  $('#weekTxt').innerHTML = `Week <b>${wk}</b> of ${D.meta.weeks}`;
+  $('#ragTxt').textContent = D.meta.overallRag === 'N' ? 'Wave status · not set'
+    : 'Wave status · ' + ragOf(D.meta.overallRag).toUpperCase();
+  $('#ragPill').className = 'pill rag-' + D.meta.overallRag;
   $('#projTitle').textContent = D.meta.projectName.length > 52
     ? 'Wave 1 Command Center' : D.meta.projectName;
   $('#cnt-backlog').textContent = allWork().filter(w => w.status !== 'done').length;
@@ -3102,6 +3310,7 @@ document.addEventListener('click', e => {
   }
 
   /* — pilots — */
+  if (t.dataset.rail) { railFilter = t.dataset.rail; paint(); return; }
   if (t.dataset.selpilot) { selPilot = t.dataset.selpilot; paint(); return; }
   if (t.dataset.openpilot) { openPilot(t.dataset.openpilot); return; }
   if (t.dataset.ptab) { pilotTab = t.dataset.ptab; paint(); return; }
@@ -3504,7 +3713,12 @@ const Auth = {
     const p = $('#userPill'), t = $('#userTxt');
     if (!p) return;
     p.hidden = !this.user;
-    if (this.user) t.textContent = this.user.name || this.user.email;
+    if (this.user) {
+      const n = this.user.name || this.user.email;
+      const w = n.replace(/[^A-Za-z .@]/g, ' ').trim().split(/[\s.]+/).filter(Boolean);
+      const ini = ((w[0] || '?')[0] + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase();
+      t.innerHTML = `<span class="uav">${esc(ini)}</span><span>${esc(n)}</span>`;
+    }
   },
   /** show the sign-in screen; resolves once a session exists */
   show(message) {
