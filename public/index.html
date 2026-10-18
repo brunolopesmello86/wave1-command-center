@@ -619,6 +619,7 @@ tr.offrow:hover{background:color-mix(in srgb,var(--rose) 9%,transparent)}
 
 /* ── risks: matrix beside the register ──── */
 .rm-scale{display:flex;margin-top:13px;border-radius:6px;overflow:hidden;border:1px solid var(--line-soft)}
+.rm-dot.mitigating{box-shadow:0 0 0 2px var(--surface),0 0 0 4px currentColor}
 .rm-sw{flex:1;padding:4px 2px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:#2F3D35}
 .riskwrap{display:grid;grid-template-columns:minmax(290px,380px) minmax(0,1fr);gap:14px;align-items:start}
@@ -1635,7 +1636,7 @@ function renderExec() {
   const ms = D.milestones.slice().sort((a, b) => a.week - b.week);
   const nextMs = ms.find(m => m.status !== 'done');
   const msDone = ms.filter(m => m.status === 'done').length;
-  const openRisks = D.risks.filter(r => r.status === 'open');
+  const openRisks = D.risks.filter(riskLive);
   const highRisks = openRisks.filter(r => r.sev === 'H');
   const blocked = allWork().filter(w => w.blocked);
   const delivOn = D.deliverables.filter(d => d.rag === 'G').length;
@@ -2283,7 +2284,7 @@ function renderPilots() {
   const log = pilotLog(p.id);
   const items = allWork().filter(w => w.pilot === p.id);
   const blocked = items.filter(w => w.blocked);
-  const pilotRisks = D.risks.filter(r => r.pilot === p.id && r.status === 'open');
+  const pilotRisks = D.risks.filter(r => r.pilot === p.id && riskLive(r));
   const pilotEvents = D.events.filter(e => e.pilot === p.id || e.title.includes(p.short))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -2798,7 +2799,7 @@ function renderChange() {
   const el = $('#panel-change');
   const tabs = [['streams', 'Workstreams'], ['training', 'Training'], ['kpis', 'Adoption KPIs'],
     ['stake', 'Stakeholders'], ['risks', 'Adoption risks']];
-  const adoption = D.risks.filter(r => r.type === 'Adoption' && r.status === 'open');
+  const adoption = D.risks.filter(r => r.type === 'Adoption' && riskLive(r));
   const trained = D.training.filter(t => t.status === 'done').length;
   const avgStream = Math.round(D.changeStreams.reduce((s, c) => s + (c.pct || 0), 0) / D.changeStreams.length);
 
@@ -2941,6 +2942,10 @@ function rmTone(l, i, dot) {
   return (dot ? RM_DOT : RM_CELL)[d];
 }
 
+/* A risk counts until it is closed. "Mitigating" means someone is working on
+   it, not that it has gone away — treating it as closed quietly dropped it
+   from the tiles, the matrix, the pilot view and the Friday report. */
+const riskLive = r => r.status !== 'closed';
 const riskPlaced = r => r.likelihood >= 1 && r.impact >= 1;
 const SEV_OPTS = [['H', 'High'], ['M', 'Medium'], ['L', 'Low']];
 const RISK_STATUS = [['open', 'Open'], ['mitigating', 'Mitigating'], ['closed', 'Closed']];
@@ -2948,7 +2953,7 @@ const SCORE_OPTS = [['0', '\u2014'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '
 
 function renderRisks() {
   const el = $('#panel-risks');
-  const open = D.risks.filter(r => r.status === 'open');
+  const open = D.risks.filter(riskLive);
   const placed = open.filter(riskPlaced)
     .sort((a, b) => (b.likelihood + b.impact) - (a.likelihood + a.impact) || 'HML'.indexOf(a.sev) - 'HML'.indexOf(b.sev));
   const num = {}; placed.forEach((r, i) => num[r.id] = i + 1);
@@ -2956,11 +2961,11 @@ function renderRisks() {
   el.innerHTML = `<div class="stack">
     <div class="tiles">
       <div class="tile ${open.some(r => r.sev === 'H') ? 'hot' : ''}"><div class="tl">High</div>
-        <div class="tv">${open.filter(r => r.sev === 'H').length}</div><div class="ts">open, severity high</div></div>
+        <div class="tv">${open.filter(r => r.sev === 'H').length}</div><div class="ts">live, severity high</div></div>
       <div class="tile ${open.some(r => r.sev === 'M') ? 'warmish' : ''}"><div class="tl">Medium</div>
-        <div class="tv">${open.filter(r => r.sev === 'M').length}</div><div class="ts">open, severity medium</div></div>
+        <div class="tv">${open.filter(r => r.sev === 'M').length}</div><div class="ts">live, severity medium</div></div>
       <div class="tile acc"><div class="tl">Low</div>
-        <div class="tv">${open.filter(r => r.sev === 'L').length}</div><div class="ts">open, severity low</div></div>
+        <div class="tv">${open.filter(r => r.sev === 'L').length}</div><div class="ts">live, severity low</div></div>
       <div class="tile acc b"><div class="tl">Closed</div>
         <div class="tv">${D.risks.filter(r => r.status === 'closed').length}</div>
         <div class="ts">of ${D.risks.length} raised</div></div>
@@ -2974,8 +2979,10 @@ function renderRisks() {
 
 /** likelihood x impact, numbered to match the table beside it */
 function riskMatrix(placed, num, openCount) {
-  const dot = r => `<button class="rm-dot" style="background:${rmTone(r.likelihood, r.impact, true)}"
-    data-riskjump="${esc(r.id)}" title="${esc(r.name)}" aria-label="Risk ${num[r.id]}: ${esc(r.name)}">${num[r.id]}</button>`;
+  const dot = r => `<button class="rm-dot${r.status === 'mitigating' ? ' mitigating' : ''}"
+    style="background:${rmTone(r.likelihood, r.impact, true)}" data-riskjump="${esc(r.id)}"
+    title="${esc(r.name)}${r.status === 'mitigating' ? ' — being mitigated' : ''}"
+    aria-label="Risk ${num[r.id]}: ${esc(r.name)}">${num[r.id]}</button>`;
   let cells = '';
   for (let i = 4; i >= 1; i--) for (let l = 1; l <= 4; l++) {
     const here = placed.filter(r => r.likelihood === l && r.impact === i);
@@ -3097,8 +3104,8 @@ function weekFacts(from, to) {
     inflight: items.filter(w => w.status === 'progress' || w.status === 'review'),
     dueNext: items.filter(w => w.status !== 'done' && w.due > to && w.due <= addDays(to, 7)),
     overdue: items.filter(w => w.status !== 'done' && w.due < from),
-    risksOpen: D.risks.filter(r => r.status === 'open'),
-    risksHigh: D.risks.filter(r => r.status === 'open' && r.sev === 'H'),
+    risksOpen: D.risks.filter(riskLive),
+    risksHigh: D.risks.filter(r => riskLive(r) && r.sev === 'H'),
     sessionsHeld: D.events.filter(e => e.date >= from && e.date <= to),
     sessionsNext: D.events.filter(e => e.date > to && e.date <= addDays(to, 7))
       .sort((a, b) => a.date.localeCompare(b.date)),
@@ -3737,7 +3744,7 @@ function paint() {
     ? 'Wave 1 Command Center' : D.meta.projectName;
   $('#cnt-backlog').textContent = allWork().filter(w => w.status !== 'done').length;
   $('#cnt-pilots').textContent = D.pilots.length;
-  $('#cnt-risks').textContent = D.risks.filter(r => r.status === 'open').length;
+  $('#cnt-risks').textContent = D.risks.filter(riskLive).length;
 
   ({ exec: renderExec, backlog: renderBacklog, timeline: renderTimeline, calendar: renderCalendar,
     pilots: renderPilots, deliv: renderDeliv, change: renderChange, risks: renderRisks,
