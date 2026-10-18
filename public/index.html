@@ -611,6 +611,225 @@ tbody tr:hover{background:var(--surface-2)}
 @media print{.masthead,.tabbar{display:none!important}}
 
 </style>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   The Friday report, dressed in the OwnIT! palette — green into blue
+   into orange, bands of light tint, a coloured rule over every
+   section. Scoped to .doc so nothing else in the app is touched.
+   ══════════════════════════════════════════════════════════════════ */
+.doc{
+  --o-green:#1F8A3F; --o-green-b:#4CAF50; --o-blue:#1B86C8; --o-blue-d:#0E6FA8;
+  --o-orange:#EE7D00; --o-amber:#F39200; --o-navy:#0F2B36;
+  --o-tint:#F2F9F3; --o-tint-b:#EEF6FC; --o-tint-o:#FEF4E8;
+  padding:0;overflow:hidden;border-color:#E2EAE4;max-width:1080px}
+.doc.landscape{max-width:1340px}
+
+/* ── banner ─────────────────────────────── */
+.doc-head{
+  background:linear-gradient(118deg,#166B33 0%,var(--o-green) 32%,var(--o-blue) 76%,var(--o-blue-d) 100%);
+  border-bottom:0;margin:0;padding:26px 30px 24px;align-items:center;gap:20px;position:relative}
+.doc-head::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;
+  background:linear-gradient(90deg,var(--o-green-b),var(--o-blue),var(--o-orange))}
+.doc-head .eyebrow{color:rgba(255,255,255,.82);letter-spacing:.2em;font-size:9.5px;margin-bottom:7px}
+.doc-head h2{color:#fff;font-size:21px;line-height:1.22;max-width:34ch;letter-spacing:-.015em}
+.doc-head p{color:rgba(255,255,255,.88)!important;font-size:12.5px;margin-top:8px!important}
+.doc-head .ragbox{background:rgba(255,255,255,.96);border:0;border-radius:11px;padding:11px 16px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);min-width:150px}
+.doc-head .ragbox .rl{color:#5A6B62;letter-spacing:.14em}
+.doc-head .ragbox .rv{color:var(--o-navy);font-size:15px}
+.doc-head .ragbox .rg{width:17px;height:17px;box-shadow:0 0 0 3px rgba(0,0,0,.05)}
+
+/* the brand line, as on the one-pager */
+.doc-brand{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.doc-brand .fist{width:26px;height:26px;border-radius:7px;flex:none;display:grid;place-items:center;
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+  color:#fff;font-size:11px;font-weight:800;letter-spacing:-.03em}
+.doc-brand .bn{color:#fff;font-weight:800;font-size:13.5px;letter-spacing:-.01em}
+.doc-brand .bn span{color:#FFD9A8;font-weight:600}
+
+/* ── body & sections ────────────────────── */
+.doc-body{padding:4px 30px 30px}
+.doc-sec{margin-top:26px;padding-top:2px}
+.doc-sec>h3{color:var(--o-navy);font-size:12px;letter-spacing:.13em;border-bottom:0;
+  padding-bottom:0;margin-bottom:11px;position:relative;padding-top:11px}
+.doc-sec>h3::before{content:"";position:absolute;top:0;left:0;width:34px;height:4px;border-radius:2px;
+  background:var(--o-green)}
+/* the rule cycles green → blue → orange down the page, as the one-pager does */
+.doc-sec:nth-of-type(3n+2)>h3::before{background:var(--o-blue)}
+.doc-sec:nth-of-type(3n)>h3::before{background:var(--o-orange)}
+.doc p{color:#33433C}
+
+/* a tinted band lifts the sections that carry the week's story */
+.doc-sec.band{background:var(--o-tint);border-radius:12px;padding:16px 18px 18px;margin-left:-18px;margin-right:-18px}
+.doc-sec.band.blue{background:var(--o-tint-b)}
+.doc-sec.band.amber{background:var(--o-tint-o)}
+
+/* ── headline figures ───────────────────── */
+.doc .tiles{gap:12px}
+.doc .tile{border:0;border-radius:12px;padding:14px 15px;background:var(--o-tint);
+  border-top:3px solid var(--o-green)}
+.doc .tile .tl{color:#5A6B62;letter-spacing:.13em;font-size:9px}
+.doc .tile .tv{color:var(--o-navy);font-size:30px;letter-spacing:-.035em}
+.doc .tile .tv small{color:#6B7C74}
+.doc .tile .ts{color:#5A6B62;font-size:10.5px}
+.doc .tile.t-blue{background:var(--o-tint-b);border-top-color:var(--o-blue)}
+.doc .tile.t-blue .tv{color:var(--o-blue-d)}
+.doc .tile.t-amber{background:var(--o-tint-o);border-top-color:var(--o-orange)}
+.doc .tile.t-amber .tv{color:#B35C00}
+.doc .tile.t-green .tv{color:var(--o-green)}
+.doc .tile.t-rose{background:#FDF0EE;border-top-color:#D4543F}
+.doc .tile.t-rose .tv{color:#B23B32}
+
+/* ── tables ─────────────────────────────── */
+.doc table{border-collapse:separate;border-spacing:0;border:1px solid #E2EAE4;border-radius:10px;overflow:hidden}
+.doc thead th{background:var(--o-tint);color:#46564E;border-bottom:1px solid #DCE7DF;
+  letter-spacing:.11em;font-size:8.5px;padding:9px 11px}
+.doc tbody td{border-bottom:1px solid #EDF2EE;padding:9px 11px;color:#33433C}
+.doc tbody tr:last-child td{border-bottom:0}
+.doc tbody tr:nth-child(even) td{background:#FAFCFA}
+.doc tbody tr:hover td{background:var(--o-tint)}
+.doc td strong{color:var(--o-navy)}
+
+/* ── badges read at a glance ────────────── */
+.doc .badge{padding:3px 10px;font-size:10px;font-weight:800;letter-spacing:.02em}
+.doc .badge.b-g{background:#E3F4E8;color:#17762F}
+.doc .badge.b-a{background:#FDEFDC;color:#A35D00}
+.doc .badge.b-r{background:#FBE7E4;color:#A8322A}
+.doc .badge.b-n{background:#EEF2EF;color:#657A6D}
+
+/* ── lists ──────────────────────────────── */
+.doc-sec ul{list-style:none;padding-left:0!important;margin:0}
+.doc-sec ul li{position:relative;padding-left:20px;margin-bottom:6px;color:#33433C}
+.doc-sec ul li::before{content:"";position:absolute;left:3px;top:8px;width:7px;height:7px;border-radius:50%;
+  background:var(--o-green-b)}
+.doc-sec:nth-of-type(3n+2) ul li::before{background:var(--o-blue)}
+.doc-sec:nth-of-type(3n) ul li::before{background:var(--o-orange)}
+
+/* ── the gantts sit in a frame, not loose ── */
+.doc .gt{border-radius:10px;border-color:#E2EAE4}
+
+/* ── closing band ───────────────────────── */
+.doc-foot{margin:28px -30px -30px;padding:16px 30px;border-top:0;
+  background:linear-gradient(100deg,#166B33,var(--o-green) 45%,var(--o-blue) 100%);
+  color:rgba(255,255,255,.9);font-size:10.5px;align-items:center}
+.doc-foot .ff{display:flex;align-items:center;gap:9px;font-weight:800;color:#fff;font-size:12px;letter-spacing:-.01em}
+.doc-foot .ff em{font-style:normal;color:#FFD9A8;font-weight:600}
+.doc-foot .fv{font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;font-size:9px;
+  color:rgba(255,255,255,.82)}
+
+@media print{
+  .doc{border:0;border-radius:0;max-width:none}
+  .doc-head{padding:16px 0 14px;margin:0 0 2px}
+  .doc-head h2{font-size:17px}
+  .doc-body{padding:0}
+  .doc-sec.band{margin-left:0;margin-right:0;padding:12px 14px 14px}
+  .doc-foot{margin:22px 0 0;padding:12px 14px;border-radius:8px}
+  .doc .tile .tv{font-size:20pt}
+}
+
+/* ══ one-pager ════════════════════════════════════════════════════ */
+/* a landscape sheet is short and wide, so the stack becomes two columns */
+.doc.one.landscape .op-flow{columns:2;column-gap:16px}
+.doc.one.landscape .op-flow>.doc-sec{break-inside:avoid;margin-top:0;margin-bottom:11px;
+  display:inline-block;width:100%}
+.doc.one.landscape .op-wide{column-span:all}
+.doc.one.landscape .op-pilots{grid-template-columns:repeat(5,minmax(0,1fr))}
+.doc.one.landscape .op-ribbon{flex-direction:column}
+.doc.one.landscape .op-3,.doc.one.landscape .op-2{grid-template-columns:1fr}
+.doc.one .doc-body{padding:0 26px 26px}
+.doc.one .doc-sec{margin-top:14px}
+.doc.one .doc-sec>h3{font-size:10.5px;padding-top:9px;margin-bottom:8px}
+.doc.one .doc-sec>h3::before{width:28px;height:3px}
+.doc.one p{font-size:11.5px;line-height:1.5;margin:0}
+.op-grid{display:grid;gap:12px}
+.op-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.op-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.op-kpi{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:14px}
+.op-kpi .tile{padding:11px 12px}
+.op-kpi .tile .tv{font-size:24px}
+.op-kpi .tile .ts{font-size:9.5px}
+
+/* pilots as a dense card grid rather than a long table */
+.op-pilots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.op-p{border:1px solid #E2EAE4;border-radius:9px;padding:8px 9px;background:#fff;border-top:3px solid var(--faint)}
+.op-p.g{border-top-color:var(--o-green)} .op-p.a{border-top-color:var(--o-orange)}
+.op-p.r{border-top-color:#D4543F} .op-p.n{border-top-color:#C3CFC7}
+.op-p.off{opacity:.5}
+.op-p .pn{font-size:11px;font-weight:800;color:var(--o-navy);line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.op-p .pp{font-size:9.5px;font-weight:600;color:var(--o-green);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.op-p .pf{display:flex;justify-content:space-between;align-items:baseline;margin-top:5px}
+.op-p .pct{font-family:var(--mono);font-size:12px;font-weight:800;color:var(--o-navy)}
+.op-p .pid{font-family:var(--mono);font-size:8.5px;color:#8A9E92}
+.op-p .pbar{height:3px;border-radius:2px;background:#EDF2EE;margin-top:4px;overflow:hidden}
+.op-p .pbar i{display:block;height:100%;background:var(--o-green)}
+
+/* the milestone ribbon, as the one-pager's numbered steps */
+.op-ribbon{display:flex;gap:6px;align-items:stretch}
+.op-step{flex:1;min-width:0;border-radius:8px;padding:8px 10px;background:var(--o-tint);
+  border-left:3px solid var(--o-green);display:flex;flex-direction:column;gap:2px}
+.op-step:nth-child(3n+2){background:var(--o-tint-b);border-left-color:var(--o-blue)}
+.op-step:nth-child(3n){background:var(--o-tint-o);border-left-color:var(--o-orange)}
+.op-step .sk{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#5A6B62}
+.op-step .sn{font-size:10.5px;font-weight:800;color:var(--o-navy);line-height:1.25}
+.op-step .sm{font-size:9.5px;color:#5A6B62}
+
+.op-list{margin:0;padding:0;list-style:none}
+.op-list li{position:relative;padding-left:16px;margin-bottom:4px;font-size:11px;line-height:1.45;color:#33433C}
+.op-list li::before{content:"";position:absolute;left:2px;top:6px;width:6px;height:6px;border-radius:50%;background:var(--o-green-b)}
+.op-list.blue li::before{background:var(--o-blue)} .op-list.amber li::before{background:var(--o-orange)}
+.op-list.rose li::before{background:#D4543F}
+.op-empty{font-size:11px;color:#8A9E92;font-style:italic}
+
+.op-box{border:1px solid #E2EAE4;border-radius:10px;padding:11px 13px;background:#fff;height:100%}
+.op-box h4{margin:0 0 7px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--o-navy)}
+.op-box h4 i{display:inline-block;width:18px;height:3px;border-radius:2px;background:var(--o-green);
+  vertical-align:middle;margin-right:7px}
+.op-box.blue h4 i{background:var(--o-blue)} .op-box.amber h4 i{background:var(--o-orange)}
+.op-box.rose h4 i{background:#D4543F}
+
+/* one page means one page: everything below is the squeeze that gets the
+   five sections, the footer band and the banner onto a single sheet */
+@media print{
+  .doc.one{font-size:9.5px}
+  .doc.one .doc-body{padding:0}
+  .doc.one .doc-head{padding:11px 0 10px}
+  .doc.one .doc-head .doc-brand{margin-bottom:7px}
+  .doc.one .doc-head h2{font-size:14.5px;max-width:54ch;line-height:1.2}
+  .doc.one .doc-head p{font-size:10px;margin-top:5px!important}
+  .doc.one .doc-head .ragbox{padding:8px 13px;min-width:128px}
+  .doc.one .doc-head .ragbox .rv{font-size:13px}
+  .doc.one .doc-sec{margin-top:9px}
+  .doc.one .doc-sec>h3{font-size:9.5px;padding-top:7px;margin-bottom:6px}
+  .doc.one .doc-sec.band{padding:9px 12px 10px}
+  .doc.one p{font-size:10px;line-height:1.42}
+  .op-kpi{margin-top:9px;gap:7px}
+  .op-kpi .tile{padding:8px 10px;border-top-width:2.5px}
+  .op-kpi .tile .tv{font-size:19px}
+  .op-kpi .tile .tl{font-size:7.5px}
+  .op-kpi .tile .ts{font-size:8px}
+  .op-pilots{gap:6px}
+  .op-p{padding:6px 7px;border-top-width:2.5px}
+  .op-p .pn{font-size:9.5px} .op-p .pp{font-size:8px} .op-p .pct{font-size:10px} .op-p .pid{font-size:7.5px}
+  .op-ribbon{gap:5px}
+  .op-step{padding:6px 8px}
+  .op-step .sk{font-size:7.5px} .op-step .sn{font-size:9.5px} .op-step .sm{font-size:8px}
+  .op-grid{gap:7px}
+  .op-box{padding:8px 10px}
+  .op-box h4{font-size:8.5px;margin-bottom:5px}
+  .op-list li{font-size:9.5px;margin-bottom:3px;padding-left:13px;line-height:1.38}
+  .op-list li::before{width:5px;height:5px;left:1px;top:5px}
+  .op-empty{font-size:9.5px}
+  .doc.one .doc-foot{margin:11px 0 0;padding:9px 13px}
+  .doc.one .doc-foot .ff{font-size:10.5px} .doc.one .doc-foot .fv{font-size:7.5px}
+  .doc.one .doc-sec,.doc.one .op-box,.doc.one .op-p{break-inside:avoid}
+  .doc.one.landscape .op-flow{columns:2;column-gap:14px}
+  .doc.one.landscape .op-flow>.doc-sec{margin-bottom:9px}
+  .doc.one.landscape .op-kpi{margin-top:8px}
+}
+
+</style>
 </head>
 <body>
 <header class="masthead">
@@ -2773,7 +2992,7 @@ function reportFor(dateStr) {
   let r = (D.reports || []).find(x => x.id === id);
   if (r) return r;
   r = { id, from, to, week: clamp(weekOf(to) || 1, 1, D.meta.weeks), created: Date.now(),
-    orient: 'portrait', day: (todayISO() >= from && todayISO() <= to) ? todayISO() : from,
+    orient: 'portrait', layout: 'one', day: (todayISO() >= from && todayISO() <= to) ? todayISO() : from,
     rag: D.meta.overallRag, author: D.meta.deliveryLead,
     headline: '', achievements: '', nextWeek: '', decisions: '', asks: '', by: '', at: 0 };
   (D.reports = D.reports || []).push(r);
@@ -2792,10 +3011,123 @@ function touchReport(r) {
 /** The printed page box. `@page` cannot be toggled with a class, so the rule
     is rewritten into its own style element whenever the choice changes. */
 function applyOrientation() {
-  const o = (RPT && RPT.orient) === 'landscape' ? 'landscape' : 'portrait';
+  const one = !RPT || (RPT.layout || 'one') === 'one';
+  const o = (!one && RPT.orient === 'landscape') ? 'landscape' : 'portrait';
   let st = document.getElementById('pageStyle');
   if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
   st.textContent = `@page{size:A4 ${o};margin:${o === 'landscape' ? '11mm 12mm' : '13mm 12mm'}}`;
+}
+
+/** The brand band that opens and closes the report. */
+function docBanner(f) {
+  const c = { G: 'var(--green)', A: 'var(--amber)', R: 'var(--rose)' }[RPT.rag] || 'var(--faint)';
+  return `<div class="doc-head">
+      <div style="min-width:0">
+        <div class="doc-brand">
+          <span class="fist">O!</span>
+          <span class="bn">OwnIT! <span>Digital Products</span></span>
+          <span style="color:rgba(255,255,255,.45)">|</span>
+          <span class="bn" style="font-weight:600">${esc(D.meta.client)}</span>
+        </div>
+        <div class="eyebrow">${esc(D.meta.supplier)} · Target Operating Model</div>
+        <h2>${esc(reportTitle(RPT))}</h2>
+        <p>Week ${f.wk} of ${D.meta.weeks} · reporting period ${esc(fmtDL(RPT.from))} to ${esc(fmtDL(RPT.to))}</p>
+      </div>
+      <div class="ragbox">
+        <span class="rg" style="background:${c}"></span>
+        <div><div class="rl">Overall status</div><div class="rv">${ragOf(RPT.rag)}</div></div>
+      </div>
+    </div>`;
+}
+function docFooter(f) {
+  return `<div class="doc-foot">
+      <span class="ff"><span class="fist" style="width:22px;height:22px;font-size:10px">O!</span>
+        OwnIT! <em>Digital Products</em></span>
+      <span class="fv">Ownership · Accountability · Empowerment</span>
+      <span class="fv">Week ${f.wk} of ${D.meta.weeks} · ${esc(fmtD(RPT.from))} – ${esc(fmtD(RPT.to))} · ${esc(RPT.author || '—')}</span>
+    </div>`;
+}
+
+/** Everything a sponsor needs on a single page. */
+function reportOnePager(f) {
+  const P = f.progress;
+  const lines = v => String(v || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const ms = D.milestones.slice().sort((a, b) => a.week - b.week);
+  const next = ms.filter(m => m.status !== 'done').slice(0, 4);
+  const risks = f.risksOpen.slice().sort((a, b) => 'HML'.indexOf(a.sev) - 'HML'.indexOf(b.sev)).slice(0, 4);
+  const li = (arr, cls, empty) => arr.length
+    ? `<ul class="op-list ${cls}">${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
+    : `<p class="op-empty">${esc(empty)}</p>`;
+
+  return `${docBanner(f)}
+  <div class="doc-body">
+
+    <div class="op-kpi">
+      <div class="tile t-green"><div class="tl">Wave progress</div><div class="tv">${P.pct}<small>%</small></div>
+        <div class="ts">${P.done} of ${P.total} activities</div></div>
+      <div class="tile t-blue"><div class="tl">Milestones met</div>
+        <div class="tv">${f.milestonesMet.length}<small>/ ${D.milestones.length}</small></div>
+        <div class="ts">${f.milestonesLate.length} overdue</div></div>
+      <div class="tile"><div class="tl">Pilots active</div>
+        <div class="tv">${activePilots().length}<small>/ ${D.pilots.length}</small></div>
+        <div class="ts">${D.pilots.filter(p => p.rag === 'R').length} red · ${D.pilots.filter(p => p.rag === 'A').length} amber</div></div>
+      <div class="tile t-amber"><div class="tl">Open risks</div>
+        <div class="tv">${f.risksOpen.length}<small>${f.risksHigh.length ? ' · ' + f.risksHigh.length + ' high' : ''}</small></div>
+        <div class="ts">${f.risksHigh.length} at high severity</div></div>
+      <div class="tile ${f.blocked.length ? 't-rose' : ''}"><div class="tl">Blocked</div>
+        <div class="tv">${f.blocked.length}</div><div class="ts">${f.blocked.length ? 'needs a decision' : 'nothing blocked'}</div></div>
+    </div>
+
+    <div class="op-flow">
+    <div class="doc-sec band"><h3>Where the wave stands</h3>
+      <p>${esc(RPT.headline) || '<span style="color:#8A9E92;font-style:italic">No headline written for this week.</span>'}</p>
+    </div>
+
+    <div class="doc-sec op-wide"><h3>Pilot status</h3>
+      <div class="op-pilots">${D.pilots.map(p => {
+        const pr = pilotProgress(p.id);
+        const cls = p.rag === 'R' ? 'r' : p.rag === 'A' ? 'a' : p.rag === 'G' ? 'g' : 'n';
+        return `<div class="op-p ${cls}${isActive(p) ? '' : ' off'}">
+          <div class="pn">${esc(p.short)}</div>
+          <div class="pp">${esc(p.projectName || (isActive(p) ? '—' : 'not activated'))}</div>
+          <div class="pbar"><i style="width:${pr.pct}%"></i></div>
+          <div class="pf"><span class="pid">${p.id} · ${esc(p.area)}</span><span class="pct">${pr.pct}%</span></div>
+        </div>`;
+      }).join('')}</div>
+    </div>
+
+    ${next.length ? `<div class="doc-sec"><h3>Milestones ahead</h3>
+      <div class="op-ribbon">${next.map(m => `<div class="op-step">
+        <span class="sk">${m.id} · ${weekLabel(m.week)}</span>
+        <span class="sn">${esc(m.name)}</span>
+        <span class="sm">${esc(fmtD(weekEnd(m.week)))} · ${esc(m.owner)}</span>
+      </div>`).join('')}</div></div>` : ''}
+
+    <div class="doc-sec"><h3>The week</h3>
+      <div class="op-grid op-3">
+        <div class="op-box"><h4><i></i>Achievements</h4>
+          ${li(lines(RPT.achievements), '', 'Nothing recorded this week.')}</div>
+        <div class="op-box blue"><h4><i></i>Next week</h4>
+          ${li(lines(RPT.nextWeek), 'blue', 'Nothing scheduled yet.')}</div>
+        <div class="op-box amber"><h4><i></i>Decisions taken</h4>
+          ${li(lines(RPT.decisions), 'amber', 'No decisions logged.')}</div>
+      </div>
+    </div>
+
+    <div class="doc-sec"><h3>What needs attention</h3>
+      <div class="op-grid op-2">
+        <div class="op-box rose"><h4><i></i>Top risks${f.risksHigh.length ? ` — ${f.risksHigh.length} high` : ''}</h4>
+          ${risks.length ? `<ul class="op-list rose">${risks.map(r =>
+            `<li><strong>${esc(r.sev)}</strong> · ${esc(r.name)} <span style="color:#8A9E92">— ${esc(r.owner || 'no owner')}</span></li>`).join('')}</ul>`
+            : '<p class="op-empty">No open risks.</p>'}</div>
+        <div class="op-box amber"><h4><i></i>Asks of ${esc(D.meta.client)}</h4>
+          ${li(lines(RPT.asks), 'amber', 'Nothing asked of the client this week.')}</div>
+      </div>
+    </div>
+    </div>
+
+  </div>
+  ${docFooter(f)}`;
 }
 
 function renderReport() {
@@ -2812,9 +3144,14 @@ function renderReport() {
         <input type="date" id="rptTo" value="${esc(RPT.to)}"></div>
       <div style="min-width:135px"><span class="lbl">Report date — the day in the title</span>
         <input type="date" id="rptDay" value="${esc(RPT.day || RPT.to)}"></div>
-      <div style="min-width:142px"><span class="lbl">Page orientation</span>
+      <div style="min-width:160px"><span class="lbl">Format</span>
+        <div class="seg">${[['one', 'One-pager'], ['full', 'Full report']].map(([k, l]) =>
+          `<button type="button" data-rlayout="${k}" aria-pressed="${(RPT.layout || 'one') === k}">${l}</button>`).join('')}</div></div>
+      ${(RPT.layout || 'one') === 'one' ? `<div style="min-width:142px"><span class="lbl">Page orientation</span>
+        <div class="src" style="padding-top:6px">Portrait — the one-pager is built for a single tall sheet</div></div>`
+        : `<div style="min-width:142px"><span class="lbl">Page orientation</span>
         <div class="seg">${[['portrait', 'Vertical'], ['landscape', 'Horizontal']].map(([k, l]) =>
-          `<button type="button" data-rorient="${k}" aria-pressed="${(RPT.orient || 'portrait') === k}">${l}</button>`).join('')}</div></div>
+          `<button type="button" data-rorient="${k}" aria-pressed="${(RPT.orient || 'portrait') === k}">${l}</button>`).join('')}</div></div>`}
       <div style="min-width:118px"><span class="lbl">Report RAG</span>
         <div class="seg">${['G', 'A', 'R'].map(v => `<button type="button" data-rrag="${v}"
           aria-pressed="${RPT.rag === v}" data-v="${v}">${v}</button>`).join('')}</div></div>
@@ -2858,7 +3195,9 @@ function renderReport() {
       </div>`).join('')}</div></div>` : ''}
   </div>
 
-  <div class="doc${(RPT.orient || 'portrait') === 'landscape' ? ' landscape' : ''}" id="reportDoc">
+  <div class="doc${(RPT.layout || 'one') !== 'one' && RPT.orient === 'landscape' ? ' landscape' : ''}${
+    (RPT.layout || 'one') === 'one' ? ' one' : ''}" id="reportDoc">
+    ${(RPT.layout || 'one') === 'one' ? reportOnePager(f) : `
     <div class="doc-head">
       <div>
         <div class="eyebrow">${esc(D.meta.supplier)} · ${esc(D.meta.client)}</div>
@@ -2979,7 +3318,7 @@ function renderReport() {
     <div class="doc-foot">
       <span>${esc(D.meta.projectName)} · Week ${f.wk} of ${D.meta.weeks} · reporting period ${esc(fmtD(RPT.from))} – ${esc(fmtD(RPT.to))}</span>
       <span>Prepared by ${esc(RPT.author || '—')} · ${esc(D.meta.supplier)}</span>
-    </div>
+    </div>`}
   </div>`;
   applyOrientation();
 }
@@ -3469,7 +3808,8 @@ document.addEventListener('click', e => {
 
   /* — report — */
   if (t.dataset.rrag) { RPT.rag = t.dataset.rrag; paint(); return; }
-  if (t.dataset.rorient) { RPT.orient = t.dataset.rorient; paint(); return; }
+  if (t.dataset.rorient) { RPT.orient = t.dataset.rorient; touchReport(RPT); paint(); return; }
+  if (t.dataset.rlayout) { RPT.layout = t.dataset.rlayout; touchReport(RPT); paint(); return; }
   if (t.id === 'rptRecompose') {
     if ((RPT.headline || RPT.achievements || RPT.nextWeek) &&
       !confirm('Replace the headline, achievements and next week with text composed from the data?')) return;
