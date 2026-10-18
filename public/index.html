@@ -580,6 +580,24 @@ body{background:var(--bg)}
   background-repeat:no-repeat;opacity:.55}
 .empty strong{margin-bottom:3px}
 
+/* ── board lanes ────────────────────────── */
+.lane{margin-bottom:14px}
+.lane .kb{padding-bottom:4px}
+.laneHead{display:flex;align-items:center;gap:9px;padding:0 2px 7px}
+.laneHead h3{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-2)}
+.laneHead .kn{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:5px;
+  background:var(--surface-3);color:var(--muted)}
+.laneHead .lanehint{font-size:11px;color:var(--faint)}
+.laneHead .lanedot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+.lane-blocked{background:linear-gradient(var(--rose-soft),transparent 62%);
+  border:1px solid color-mix(in srgb,var(--rose) 22%,transparent);border-radius:12px;padding:11px 11px 4px}
+.lane-blocked .laneHead h3{color:var(--rose)}
+.lane-blocked .laneHead .lanedot{background:var(--rose)}
+.lane-blocked .laneHead .kn{background:color-mix(in srgb,var(--rose) 16%,transparent);color:var(--rose)}
+.lane-blocked .kcol{max-height:none}
+.lane-blocked .klist{min-height:38px}
+.kempty{padding:8px 2px}
+
 /* ── pilot pane: content beside the glance panel ── */
 .pilotpane{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;align-items:start}
 .pilotpane>*{min-width:0}
@@ -1381,7 +1399,6 @@ const STATUSES = [
   { k: 'refinement', t: 'Refinement', c: 'var(--teal)' },
   { k: 'ready', t: 'Ready', c: 'var(--blue)' },
   { k: 'progress', t: 'In progress', c: 'var(--green-bright)' },
-  { k: 'blocked', t: 'Blocked', c: 'var(--rose)' },
   { k: 'review', t: 'In review', c: 'var(--violet)' },
   { k: 'done', t: 'Done', c: 'var(--green)' },
 ];
@@ -1409,7 +1426,10 @@ function allWork() {
         id, pilot: p.id, pilotShort: p.short, project: p.projectName || '', act: a.id, phase: a.phase,
         title: a.title, role: a.role, output: a.output, gate: a.gate,
         startWk: o.startWk ?? a.startWk, endWk: o.endWk ?? a.endWk,
-        status: o.status || 'backlog', owner: o.owner || '', notes: o.notes || '',
+        // a record written before blocked became a flag still says status:'blocked'
+        status: (o.status === 'blocked' ? 'progress' : o.status) || 'backlog',
+        blocked: o.blocked === undefined ? o.status === 'blocked' : !!o.blocked,
+        owner: o.owner || '', notes: o.notes || '',
         due: o.due || weekEnd(o.endWk ?? a.endWk),
         pct: o.pct ?? (o.status === 'done' ? 100 : 0),
         blocker: o.blocker || '',
@@ -1435,7 +1455,7 @@ function pilotProgress(pid) {
   const items = allWork().filter(w => w.pilot === pid);
   const done = items.filter(w => w.status === 'done').length;
   const active = items.filter(w => w.status === 'progress' || w.status === 'review').length;
-  const blocked = items.filter(w => w.status === 'blocked').length;
+  const blocked = items.filter(w => w.blocked).length;
   return { total: items.length, done, active, blocked, pct: Math.round(done / items.length * 100) };
 }
 function overallProgress() {
@@ -1528,7 +1548,7 @@ function renderExec() {
   const msDone = ms.filter(m => m.status === 'done').length;
   const openRisks = D.risks.filter(r => r.status === 'open');
   const highRisks = openRisks.filter(r => r.sev === 'H');
-  const blocked = allWork().filter(w => w.status === 'blocked');
+  const blocked = allWork().filter(w => w.blocked);
   const delivOn = D.deliverables.filter(d => d.rag === 'G').length;
   const pilotsRed = D.pilots.filter(p => p.rag === 'R');
   const pilotsAmber = D.pilots.filter(p => p.rag === 'A');
@@ -1702,20 +1722,32 @@ function renderBacklog() {
       </div>
     </div></div>
 
-    <div class="kb" id="board">${STATUSES.map(s => {
-      const col = items.filter(w => w.status === s.k)
-        .sort((a, b) => (a.due || '').localeCompare(b.due || '') || a.act.localeCompare(b.act));
-      // a column of 400 cards helps nobody and slows the board — show the
-      // most urgent, and say plainly how many are behind them
-      const CAP = 60, shown = col.slice(0, CAP);
-      return `<section class="kcol" data-col="${s.k}">
-        <div class="kbar" style="background:${s.c}"></div>
-        <header><h3>${esc(s.t)}</h3><span class="kn">${col.length}</span></header>
-        <div class="klist" data-drop="${s.k}">
-          ${shown.map(w => card(w)).join('') || '<div class="src" style="padding:8px 2px">Nothing here.</div>'}
-          ${col.length > CAP ? `<div class="src" style="padding:8px 4px;text-align:center">
-            ${col.length - CAP} more, sorted behind these by due date.<br>Filter by pilot or phase to reach them.</div>` : ''}
-        </div>
+    <div id="board">${[
+      ['blocked', 'Blocked', 'Needs a decision before it can move — drop a card here to flag it'],
+      ['regular', 'Regular', ''],
+    ].map(([lane, label, hint]) => {
+      const laneItems = items.filter(w => (lane === 'blocked') === !!w.blocked);
+      return `<section class="lane lane-${lane}">
+        <header class="laneHead">
+          <span class="lanedot"></span><h3>${label}</h3><span class="kn">${laneItems.length}</span>
+          ${hint ? `<span class="lanehint">${esc(hint)}</span>` : ''}
+        </header>
+        <div class="kb">${STATUSES.map(st => {
+          const col = laneItems.filter(w => w.status === st.k)
+            .sort((a, b) => (a.due || '').localeCompare(b.due || '') || a.act.localeCompare(b.act));
+          // a column of hundreds helps nobody — show the most urgent and say how many sit behind
+          const CAP = 60, shown = col.slice(0, CAP);
+          return `<section class="kcol" data-col="${st.k}">
+            <div class="kbar" style="background:${st.c}"></div>
+            <header><h3>${esc(st.t)}</h3><span class="kn">${col.length}</span></header>
+            <div class="klist" data-drop="${st.k}" data-lane="${lane}">
+              ${shown.map(w => card(w)).join('') || `<div class="src kempty">${
+                lane === 'blocked' ? 'Nothing blocked here.' : 'Nothing here.'}</div>`}
+              ${col.length > CAP ? `<div class="src" style="padding:8px 4px;text-align:center">
+                ${col.length - CAP} more, sorted behind these by due date.<br>Filter by pilot or phase to reach them.</div>` : ''}
+            </div>
+          </section>`;
+        }).join('')}</div>
       </section>`;
     }).join('')}</div>
 
@@ -1742,11 +1774,11 @@ function card(w) {
           <span class="chip">${esc(w.pilotShort)}</span>
           ${w.project ? `<span class="chip on kproj" title="${esc(w.project)}">${esc(w.project)}</span>` : ''}
           ${w.gate ? `<span class="badge b-v">${esc(w.gate)}</span>` : ''}
-          ${w.status === 'blocked' ? '<span class="badge b-r">Blocked</span>' : ''}
+          ${w.blocked ? '<span class="badge b-r">Blocked</span>' : ''}
         </div>
       </div>
     </div>
-    ${w.status === 'blocked' ? `<div class="kblock" title="${esc(w.blocker || 'No blocker recorded')}">${
+    ${w.blocked ? `<div class="kblock" title="${esc(w.blocker || 'No blocker recorded')}">${
       w.blocker ? esc(w.blocker) : 'No blocker recorded yet'}</div>` : ''}
     ${w.pct > 0 && w.pct < 100 ? bar(w.pct) : ''}
     <div class="kfoot">
@@ -1767,6 +1799,8 @@ function openCard(id) {
     <div class="grid g2">
       <div><span class="lbl">Status</span>
         <select data-w="${id}" data-wf="status">${opts(STATUSES.map(s => [s.k, s.t]), w.status)}</select></div>
+      <div><span class="lbl">Blocked — moves it to the top lane</span>
+        <select data-w="${id}" data-wf="blocked">${opts([['false', 'Not blocked'], ['true', 'Blocked']], String(!!w.blocked))}</select></div>
       <div><span class="lbl">Owner</span>
         <input type="text" data-w="${id}" data-wf="owner" value="${esc(w.owner)}" placeholder="Name"></div>
       <div><span class="lbl">Due</span>
@@ -1779,9 +1813,9 @@ function openCard(id) {
         <input type="number" min="1" max="${D.meta.weeks}" data-w="${id}" data-wf="endWk" value="${w.endWk}"></div>
     </div>
     <div><span class="lbl">Blocker — shown on the card while it sits in Blocked, and in the Friday report</span>
-      ${w.status !== 'blocked' && w.blocker ? `<div class="note" style="margin-bottom:6px">
-        This card is in <strong>${esc((STATUSES.find(x => x.k === w.status) || {}).t || w.status)}</strong>, so this note is no longer
-        shown on the board or counted as blocked. <button class="btn sm" data-clearblk="${id}">Clear the note</button></div>` : ''}
+      ${!w.blocked && w.blocker ? `<div class="note" style="margin-bottom:6px">
+        This card is not flagged as blocked, so this note is no longer shown on the board or counted.
+        <button class="btn sm" data-clearblk="${id}">Clear the note</button></div>` : ''}
       <textarea data-w="${id}" data-wf="blocker" placeholder="What is stopping this, and who can unblock it.">${esc(w.blocker)}</textarea></div>
     <div><span class="lbl">Notes</span>
       <textarea data-w="${id}" data-wf="notes" placeholder="Progress notes, decisions, links.">${esc(w.notes)}</textarea></div>
@@ -2140,7 +2174,7 @@ function renderPilots() {
   const pr = pilotProgress(p.id);
   const log = pilotLog(p.id);
   const items = allWork().filter(w => w.pilot === p.id);
-  const blocked = items.filter(w => w.status === 'blocked');
+  const blocked = items.filter(w => w.blocked);
   const pilotRisks = D.risks.filter(r => r.pilot === p.id && r.status === 'open');
   const pilotEvents = D.events.filter(e => e.pilot === p.id || e.title.includes(p.short))
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -2926,7 +2960,7 @@ function weekFacts(from, to) {
     milestonesMet: ms.filter(m => m.status === 'done'),
     milestonesNext: ms.filter(m => m.status !== 'done').slice(0, 3),
     milestonesLate: ms.filter(m => m.status !== 'done' && m.week < wk),
-    blocked: items.filter(w => w.status === 'blocked'),
+    blocked: items.filter(w => w.blocked),
     inflight: items.filter(w => w.status === 'progress' || w.status === 'review'),
     dueNext: items.filter(w => w.status !== 'done' && w.due > to && w.due <= addDays(to, 7)),
     overdue: items.filter(w => w.status !== 'done' && w.due < from),
@@ -3941,7 +3975,7 @@ document.addEventListener('input', e => {
 const NUMF = new Set(['week', 'weeks', 'dueWeek', 'pct', 'startWk', 'endWk', 'startWeek', 'endWeek', 'likelihood', 'impact']);
 function coerce(field, el) {
   if (el.type === 'number' || el.type === 'range' || NUMF.has(field)) return +el.value || 0;
-  if (field === 'done') return el.value === 'true';
+  if (field === 'done' || field === 'blocked') return el.value === 'true';
   return el.value;
 }
 function writeRec(coll, id, field, el, repaint) {
@@ -3962,10 +3996,14 @@ function writeWork(el, repaint) {
   const patch = {}; patch[field] = coerce(field, el);
   if (field === 'status' && patch.status === 'done') patch.pct = 100;
   setWork(id, patch);
-  if (field === 'status' && before && before.status !== patch.status) {
-    const p = D.pilots.find(x => x.id === before.pilot);
-    logUpdate(`${p ? p.short : before.pilot} · ${before.act} → ${(STATUSES.find(s => s.k === patch.status) || {}).t}`,
-      before.title, patch.status === 'done' ? 'g' : patch.status === 'blocked' ? 'r' : 'b', before.act);
+  if (before && (field === 'status' || field === 'blocked')) {
+    const p = D.pilots.find(x => x.id === before.pilot), who = p ? p.short : before.pilot;
+    if (field === 'blocked' && !!before.blocked !== patch.blocked)
+      logUpdate(`${who} · ${before.act} ${patch.blocked ? 'blocked' : 'unblocked'}`,
+        before.title, patch.blocked ? 'r' : 'b', before.act);
+    if (field === 'status' && before.status !== patch.status)
+      logUpdate(`${who} · ${before.act} → ${(STATUSES.find(s => s.k === patch.status) || {}).t}`,
+        before.title, patch.status === 'done' ? 'g' : 'b', before.act);
   }
   if (repaint) paint(); else if (Store.mode !== 'db') Store.saveLocal();
 }
@@ -4006,14 +4044,18 @@ document.addEventListener('dragover', e => {
 document.addEventListener('drop', e => {
   const list = e.target.closest('[data-drop]'); if (!list || !dragId) return;
   e.preventDefault();
-  const status = list.dataset.drop, id = dragId, before = getWork(id);
-  if (before && before.status !== status) {
-    const patch = { status };
+  const status = list.dataset.drop, blocked = list.dataset.lane === 'blocked';
+  const id = dragId, before = getWork(id);
+  if (before && (before.status !== status || !!before.blocked !== blocked)) {
+    const patch = { status, blocked };
     if (status === 'done') patch.pct = 100;
     setWork(id, patch);
-    const p = D.pilots.find(x => x.id === before.pilot);
-    logUpdate(`${p ? p.short : before.pilot} · ${before.act} → ${(STATUSES.find(s => s.k === status) || {}).t}`,
-      before.title, status === 'done' ? 'g' : status === 'blocked' ? 'r' : 'b', before.act);
+    const p = D.pilots.find(x => x.id === before.pilot), who = p ? p.short : before.pilot;
+    const col = (STATUSES.find(s => s.k === status) || {}).t;
+    logUpdate(!!before.blocked !== blocked
+      ? `${who} · ${before.act} ${blocked ? 'blocked' : 'unblocked'} — ${col}`
+      : `${who} · ${before.act} → ${col}`,
+      before.title, blocked ? 'r' : status === 'done' ? 'g' : 'b', before.act);
   }
   dragId = null; paint();
 });
