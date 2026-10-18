@@ -414,7 +414,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
 
 /* ── print: the Friday pack only ────────── */
 @media print{
-  @page{size:A4 portrait;margin:13mm 12mm}
+  @page{size:A4 portrait;margin:0}
   /* Keep every fill. A browser drops background colour unless told otherwise,
      and "Background graphics" is off by default in the Save-as-PDF dialog —
      which silently erased the gantt bars, the RAG dots and the badges while
@@ -427,7 +427,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
   html[data-theme="dark"],html[data-theme="dark"] body{background:#fff!important}
   main{padding:0!important}
   .wrap{max-width:none;padding:0!important}
-  .doc{border:0;box-shadow:none;padding:0;max-width:none}
+  .doc{border:0;box-shadow:none;padding:0;max-width:none;border-radius:0}
   .doc-sec{break-inside:avoid;page-break-inside:avoid}
   .card{break-inside:avoid;box-shadow:none;border-color:#c4c4c4}
   table{font-size:9.5pt} th{font-size:7.5pt;background:#fff!important}
@@ -591,6 +591,14 @@ body{background:var(--bg)}
   background-repeat:no-repeat;opacity:.55}
 .empty strong{margin-bottom:3px}
 
+/* ── Avangrid mark ──────────────────────── */
+.avg{display:block}
+.avg .leaf-g{fill:#5BAD3F}
+.avg .leaf-b{fill:#0093D0}
+.mark.avgmark{background:#fff;padding:5px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.doc-brand .avgwrap{width:28px;height:24px;border-radius:6px;background:#fff;flex:none;
+  display:grid;place-items:center;padding:3px}
+
 /* ── theme switch ───────────────────────── */
 .themebtn{cursor:pointer;gap:7px;font-family:inherit}
 .masthead .themebtn{background:rgba(255,255,255,.08);border-color:var(--nav-line);color:var(--nav-ink-2)}
@@ -600,7 +608,13 @@ body{background:var(--bg)}
 /* ── board lanes ────────────────────────── */
 .lane{margin-bottom:14px}
 .lane .kb{padding-bottom:4px}
-.laneHead{display:flex;align-items:center;gap:9px;padding:0 2px 7px}
+.laneHead{display:flex;align-items:center;gap:9px;padding:4px 6px 7px;width:100%;
+  background:none;border:0;cursor:pointer;font:inherit;text-align:left;border-radius:8px}
+.laneHead:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.laneHead .chev{font-size:11px;color:var(--faint);transition:transform .14s;flex:none}
+.lane.shut .laneHead .chev{transform:rotate(-90deg)}
+.lane.shut{margin-bottom:9px}
+.lane.shut.lane-blocked{padding-bottom:4px}
 .laneHead h3{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-2)}
 .laneHead .kn{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:5px;
   background:var(--surface-3);color:var(--muted)}
@@ -760,12 +774,12 @@ tbody tr:hover{background:var(--surface-2)}
   color:rgba(255,255,255,.82)}
 
 @media print{
-  .doc{border:0;border-radius:0;max-width:none}
-  .doc-head{padding:16px 0 14px;margin:0 0 2px}
+  .doc{border:0;border-radius:0;max-width:none;padding:0}
+  .doc-head{padding:13mm 13mm 9mm;margin:0}
   .doc-head h2{font-size:17px}
-  .doc-body{padding:0}
+  .doc-body{padding:0 13mm}
   .doc-sec.band{margin-left:0;margin-right:0;padding:12px 14px 14px}
-  .doc-foot{margin:22px 0 0;padding:12px 14px;border-radius:8px}
+  .doc-foot{margin:11mm 0 0;padding:8mm 13mm;border-radius:0}
   .doc .tile .tv{font-size:20pt}
 }
 
@@ -835,8 +849,9 @@ tbody tr:hover{background:var(--surface-2)}
    five sections, the footer band and the banner onto a single sheet */
 @media print{
   .doc.one{font-size:9.5px}
-  .doc.one .doc-body{padding:0}
-  .doc.one .doc-head{padding:11px 0 10px}
+  .doc.one .doc-body{padding:0 12mm}
+  .doc.one .doc-head{padding:10mm 12mm 7mm}
+  .doc-head .ragbox{box-shadow:none;border:1px solid rgba(0,0,0,.08)}
   .doc.one .doc-head .doc-brand{margin-bottom:7px}
   .doc.one .doc-head h2{font-size:14.5px;max-width:54ch;line-height:1.2}
   .doc.one .doc-head p{font-size:10px;margin-top:5px!important}
@@ -863,7 +878,7 @@ tbody tr:hover{background:var(--surface-2)}
   .op-list li{font-size:9.5px;margin-bottom:3px;padding-left:13px;line-height:1.38}
   .op-list li::before{width:5px;height:5px;left:1px;top:5px}
   .op-empty{font-size:9.5px}
-  .doc.one .doc-foot{margin:11px 0 0;padding:9px 13px}
+  .doc.one .doc-foot{margin:9mm 0 0;padding:7mm 12mm;border-radius:0}
   .doc.one .doc-foot .ff{font-size:10.5px} .doc.one .doc-foot .fv{font-size:7.5px}
   .doc.one .doc-sec,.doc.one .op-box,.doc.one .op-p{break-inside:avoid}
   .doc.one.landscape .op-flow{columns:2;column-gap:14px}
@@ -877,7 +892,7 @@ tbody tr:hover{background:var(--surface-2)}
 <header class="masthead">
   <div class="wrap">
     <div class="mh-left">
-      <div class="mark">O!</div>
+      <div class="mark avgmark" title="Avangrid"><svg class="avg" viewBox="0 0 44 34" width="100%" height="100%" aria-hidden="true"><path class="leaf-g" d="M14 1C8 8 3 14.5 3 20.2A11 11 0 0 0 25 20.2C25 14.5 20 8 14 1Z"/><path class="leaf-b" d="M31 7c-4.2 5-7.5 9.6-7.5 13.6a7.5 7.5 0 0 0 15 0C38.5 16.6 35.2 12 31 7Z"/></svg></div>
       <div>
         <div class="eyebrow">OwnIT! Digital Products · Target Operating Model</div>
         <h1 id="projTitle">Wave 1 Command Center</h1>
@@ -1709,6 +1724,15 @@ function renderExec() {
    430 cards (43 lifecycle activities × 10 pilots). Filters first, then
    the board: an unfiltered 430-card wall helps nobody.               */
 const F = { pilot: '', phase: '', status: '', owner: '', q: '', mine: false };
+/* which lanes are open — a view preference, kept in this browser */
+const LANE_OPEN = (() => {
+  try { return JSON.parse(localStorage.getItem('cc.lanes') || '{}'); } catch (_) { return {}; }
+})();
+const laneOpen = k => LANE_OPEN[k] !== false;
+function toggleLane(k) {
+  LANE_OPEN[k] = !laneOpen(k);
+  try { localStorage.setItem('cc.lanes', JSON.stringify(LANE_OPEN)); } catch (_) {}
+}
 
 function renderBacklog() {
   const el = $('#panel-backlog');
@@ -1753,12 +1777,18 @@ function renderBacklog() {
       ['regular', 'Regular', ''],
     ].map(([lane, label, hint]) => {
       const laneItems = items.filter(w => (lane === 'blocked') === !!w.blocked);
-      return `<section class="lane lane-${lane}">
-        <header class="laneHead">
+      const open = laneOpen(lane);
+      const byCol = STATUSES.map(st => `${st.t} ${laneItems.filter(w => w.status === st.k).length}`)
+        .filter(x => !/ 0$/.test(x)).join(' · ');
+      return `<section class="lane lane-${lane}${open ? '' : ' shut'}">
+        <button class="laneHead" type="button" data-lane-toggle="${lane}"
+          aria-expanded="${open}" title="${open ? 'Collapse this lane' : 'Open this lane'}">
+          <span class="chev">▾</span>
           <span class="lanedot"></span><h3>${label}</h3><span class="kn">${laneItems.length}</span>
-          ${hint ? `<span class="lanehint">${esc(hint)}</span>` : ''}
-        </header>
-        <div class="kb">${STATUSES.map(st => {
+          ${open ? (hint ? `<span class="lanehint">${esc(hint)}</span>` : '')
+            : `<span class="lanehint">${esc(byCol || 'nothing here')}</span>`}
+        </button>
+        <div class="kb"${open ? '' : ' hidden'}>${STATUSES.map(st => {
           const col = laneItems.filter(w => w.status === st.k)
             .sort((a, b) => (a.due || '').localeCompare(b.due || '') || a.act.localeCompare(b.act));
           // a column of hundreds helps nobody — show the most urgent and say how many sit behind
@@ -3075,7 +3105,10 @@ function applyOrientation() {
   const o = (!one && RPT.orient === 'landscape') ? 'landscape' : 'portrait';
   let st = document.getElementById('pageStyle');
   if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
-  st.textContent = `@page{size:A4 ${o};margin:${o === 'landscape' ? '11mm 12mm' : '13mm 12mm'}}`;
+  // no page margin at all: the banner and the closing band run to the paper
+  // edge, and the document sets its own gutters — a designed sheet, not a
+  // word-processor printout
+  st.textContent = `@page{size:A4 ${o};margin:0}`;
 }
 
 /** The brand band that opens and closes the report. */
@@ -3084,10 +3117,10 @@ function docBanner(f) {
   return `<div class="doc-head">
       <div style="min-width:0">
         <div class="doc-brand">
-          <span class="fist">O!</span>
-          <span class="bn">OwnIT! <span>Digital Products</span></span>
+          <span class="avgwrap"><svg class="avg" viewBox="0 0 44 34" width="100%" height="100%" aria-hidden="true"><path class="leaf-g" d="M14 1C8 8 3 14.5 3 20.2A11 11 0 0 0 25 20.2C25 14.5 20 8 14 1Z"/><path class="leaf-b" d="M31 7c-4.2 5-7.5 9.6-7.5 13.6a7.5 7.5 0 0 0 15 0C38.5 16.6 35.2 12 31 7Z"/></svg></span>
+          <span class="bn">Avangrid</span>
           <span style="color:rgba(255,255,255,.45)">|</span>
-          <span class="bn" style="font-weight:600">${esc(D.meta.client)}</span>
+          <span class="bn">OwnIT! <span>Digital Products</span></span>
         </div>
         <div class="eyebrow">${esc(D.meta.supplier)} · Target Operating Model</div>
         <h2>${esc(reportTitle(RPT))}</h2>
@@ -3101,8 +3134,8 @@ function docBanner(f) {
 }
 function docFooter(f) {
   return `<div class="doc-foot">
-      <span class="ff"><span class="fist" style="width:22px;height:22px;font-size:10px">O!</span>
-        OwnIT! <em>Digital Products</em></span>
+      <span class="ff"><span class="avgwrap" style="width:24px;height:20px"><svg class="avg" viewBox="0 0 44 34" width="100%" height="100%" aria-hidden="true"><path class="leaf-g" d="M14 1C8 8 3 14.5 3 20.2A11 11 0 0 0 25 20.2C25 14.5 20 8 14 1Z"/><path class="leaf-b" d="M31 7c-4.2 5-7.5 9.6-7.5 13.6a7.5 7.5 0 0 0 15 0C38.5 16.6 35.2 12 31 7Z"/></svg></span>
+        Avangrid <em>· OwnIT! Digital Products</em></span>
       <span class="fv">Ownership · Accountability · Empowerment</span>
       <span class="fv">Week ${f.wk} of ${D.meta.weeks} · ${esc(fmtD(RPT.from))} – ${esc(fmtD(RPT.to))} · ${esc(RPT.author || '—')}</span>
     </div>`;
@@ -3221,6 +3254,9 @@ function renderReport() {
       <div class="row" style="align-self:flex-end">
         <button class="btn" id="rptRecompose">Compose from data</button>
         <button class="btn primary" id="rptPrint">Print / save as PDF</button>
+        <div class="src" style="flex-basis:100%;text-align:right;margin-top:4px">
+          In the print dialog turn <strong>Headers and footers</strong> off and
+          <strong>Background graphics</strong> on for a clean full-bleed PDF.</div>
       </div>
     </div></div></div>
 
@@ -3709,6 +3745,7 @@ document.addEventListener('click', e => {
   }
 
   /* — pilots — */
+  if (t.dataset.laneToggle) { toggleLane(t.dataset.laneToggle); paint(); return; }
   if (t.dataset.rail) { railFilter = t.dataset.rail; paint(); return; }
   if (t.dataset.selpilot) { selPilot = t.dataset.selpilot; paint(); return; }
   if (t.dataset.openpilot) { openPilot(t.dataset.openpilot); return; }
@@ -4144,7 +4181,7 @@ const Auth = {
     const reg = this.mode === 'register';
     $('#auth').innerHTML = `<form class="auth-card" id="authForm" autocomplete="on">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-        <div class="mark">O!</div>
+        <div class="mark avgmark" title="Avangrid"><svg class="avg" viewBox="0 0 44 34" width="100%" height="100%" aria-hidden="true"><path class="leaf-g" d="M14 1C8 8 3 14.5 3 20.2A11 11 0 0 0 25 20.2C25 14.5 20 8 14 1Z"/><path class="leaf-b" d="M31 7c-4.2 5-7.5 9.6-7.5 13.6a7.5 7.5 0 0 0 15 0C38.5 16.6 35.2 12 31 7Z"/></svg></div>
         <div><div class="eyebrow">OwnIT! Digital Products</div>
           <h2 style="font-size:17px">Wave 1 Command Center</h2></div>
       </div>
