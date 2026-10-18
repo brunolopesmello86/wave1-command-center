@@ -6,14 +6,24 @@
 <meta name="color-scheme" content="light">
 <meta name="description" content="OwnIT! Digital Products Wave 1 — project command center: backlog, calendar, timeline, pilots, deliverables, change plan, risks and weekly executive report.">
 <style>
-  /* This copy is pinned to light mode: data-theme="light" on <html> keeps the
-     dark blocks in the stylesheet below from ever applying, whatever the
-     operating system is set to. Remove the attribute to follow the OS again. */
+  /* The theme is the person's choice, remembered per browser, and set before
+     first paint so the page never flashes the wrong one. data-theme is always
+     present — "light" or "dark" — so the OS setting never decides on its own. */
   :root{color-scheme:light}
+  :root[data-theme="dark"]{color-scheme:dark}
   html,body{margin:0;background:#F4F7F4}
+html[data-theme="dark"],html[data-theme="dark"] body{background:#0C1511}
   img{max-width:100%}
   [hidden]{display:none!important}
 </style>
+<script>
+/* before first paint, so the page never flashes the wrong theme */
+(function () {
+  var t = 'light';
+  try { t = localStorage.getItem('cc.theme') || 'light'; } catch (e) {}
+  document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+})();
+</script>
 <title>Wave 1 Command Center</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
@@ -40,7 +50,7 @@
     --bg:#0C1511; --surface:#141F18; --surface-2:#1A2820; --surface-3:#213228; --band:#16301E;
     --line:#2A3C31; --line-soft:#213028;
     --ink:#E8F1EA; --ink-2:#BFCEC4; --muted:#8AA295; --faint:#6D8377;
-    --green:#42C06D; --green-bright:#55D480; --green-soft:#143020;
+    --green:#3FC46C; --green-bright:#5BDC88; --green-soft:#10301D;
     --blue:#54B2E6; --blue-soft:#112938;
     --amber:#E4A945; --amber-soft:#32250E;
     --rose:#E68074; --rose-soft:#351A17;
@@ -52,10 +62,10 @@
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0C1511; --surface:#141F18; --surface-2:#1A2820; --surface-3:#213228; --band:#16301E;
-  --line:#2A3C31; --line-soft:#213028;
+  --bg:#071008; --surface:#0E1A12; --surface-2:#13231A; --surface-3:#1B2F22; --band:#12301C;
+  --line:#24402E; --line-soft:#1B3023;
   --ink:#E8F1EA; --ink-2:#BFCEC4; --muted:#8AA295; --faint:#6D8377;
-  --green:#42C06D; --green-bright:#55D480; --green-soft:#143020;
+  --green:#3FC46C; --green-bright:#5BDC88; --green-soft:#10301D;
   --blue:#54B2E6; --blue-soft:#112938;
   --amber:#E4A945; --amber-soft:#32250E;
   --rose:#E68074; --rose-soft:#351A17;
@@ -414,6 +424,7 @@ th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
     --ink:#111;--ink-2:#2c2c2c;--muted:#4d4d4d;--faint:#6b6b6b;
     --line:#b5b5b5;--line-soft:#dcdcdc;--shadow:none;--shadow-lift:none}
   .masthead,.tabbar,.noprint,.drawer,.scrim{display:none!important}
+  html[data-theme="dark"],html[data-theme="dark"] body{background:#fff!important}
   main{padding:0!important}
   .wrap{max-width:none;padding:0!important}
   .doc{border:0;box-shadow:none;padding:0;max-width:none}
@@ -580,6 +591,12 @@ body{background:var(--bg)}
   background-repeat:no-repeat;opacity:.55}
 .empty strong{margin-bottom:3px}
 
+/* ── theme switch ───────────────────────── */
+.themebtn{cursor:pointer;gap:7px;font-family:inherit}
+.masthead .themebtn{background:rgba(255,255,255,.08);border-color:var(--nav-line);color:var(--nav-ink-2)}
+.masthead .themebtn:hover{background:rgba(255,255,255,.16);color:#fff}
+.themebtn .ticon{font-size:12px;line-height:1}
+
 /* ── board lanes ────────────────────────── */
 .lane{margin-bottom:14px}
 .lane .kb{padding-bottom:4px}
@@ -636,6 +653,13 @@ tbody tr:hover{background:var(--surface-2)}
    section. Scoped to .doc so nothing else in the app is touched.
    ══════════════════════════════════════════════════════════════════ */
 .doc{
+  /* the document is a sheet of paper: redefine the app's tokens inside it so
+     everything nested — tiles, tables, badges, the gantts — stays light even
+     when the rest of the app is dark */
+  --bg:#fff; --surface:#fff; --surface-2:#F5F8F6; --surface-3:#E9F0EB; --band:#F2F9F3;
+  --line:#DCE7DF; --line-soft:#EDF2EE;
+  --ink:#14241A; --ink-2:#33433C; --muted:#5A6B62; --faint:#8A9E92;
+  background:#fff; color:#14241A;
   --o-green:#1F8A3F; --o-green-b:#4CAF50; --o-blue:#1B86C8; --o-blue-d:#0E6FA8;
   --o-orange:#EE7D00; --o-amber:#F39200; --o-navy:#0F2B36;
   --o-tint:#F2F9F3; --o-tint-b:#EEF6FC; --o-tint-o:#FEF4E8;
@@ -863,6 +887,8 @@ tbody tr:hover{background:var(--surface-2)}
       <span class="pill" id="weekPill"><span class="dot"></span><span id="weekTxt">Week —</span></span>
       <span class="pill" id="ragPill"><span class="dot"></span><span id="ragTxt">Status —</span></span>
       <span class="pill" id="syncPill"><span class="dot"></span><span id="syncTxt">Local</span></span>
+      <button class="pill themebtn" id="themeBtn" type="button" aria-pressed="false"
+        title="Switch between light and dark"><span class="ticon">☾</span><span id="themeTxt">Dark</span></button>
       <span class="pill" id="userPill" hidden title="Signed in — manage your account under Data &amp; setup"><span id="userTxt" style="display:flex;align-items:center;gap:8px"></span></span>
     </div>
   </div>
@@ -4230,8 +4256,23 @@ async function loadPeople() {
     </div>`;
 }
 
+/* ── theme: the person's choice, remembered, never the OS's decision ──── */
+function currentTheme() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('cc.theme', t); } catch (_) {}
+  const b = $('#themeBtn'), x = $('#themeTxt');
+  if (b) { b.setAttribute('aria-pressed', String(t === 'dark'));
+    b.querySelector('.ticon').textContent = t === 'dark' ? '☀' : '☾'; }
+  if (x) x.textContent = t === 'dark' ? 'Light' : 'Dark';
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('#themeBtn')) applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+});
+
 /* ══ BOOT ══════════════════════════════════════════════════════════ */
 D = freshData();
+applyTheme(currentTheme());
 paint();
 
 (async () => {
