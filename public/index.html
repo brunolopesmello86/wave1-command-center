@@ -552,8 +552,9 @@ body{background:var(--bg)}
   align-items:center;width:100%;text-align:left;font:inherit;cursor:pointer;border:1px solid var(--line-soft);
   background:var(--surface);border-radius:10px;padding:9px 11px;transition:border-color .12s,background .12s}
 .railrow:hover{border-color:var(--faint)}
-.railrow.sel{border-color:color-mix(in srgb,var(--green) 45%,transparent);background:var(--green-soft)}
-.railrow.sel::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;
+.railrow.sel{border-color:color-mix(in srgb,var(--green) 45%,transparent);background:var(--surface);
+  box-shadow:0 1px 2px rgba(18,36,26,.05),0 8px 18px -14px rgba(18,36,26,.3)}
+.railrow.sel::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:4px;
   border-radius:0 3px 3px 0;background:var(--green)}
 .railrow.off{opacity:.62}
 .railrow .rname{font-size:13px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -862,22 +863,24 @@ tbody tr:hover{background:var(--surface-2)}
 .op-box.blue h4 i{background:var(--o-blue)} .op-box.amber h4 i{background:var(--o-orange)}
 .op-box.rose h4 i{background:#D4543F}
 
-/* one page means one page: everything below is the squeeze that gets the
-   five sections, the footer band and the banner onto a single sheet */
-@media print{
-  .doc.one{font-size:9.5px}
-  .doc.one .doc-body{padding:0 12mm}
-  .doc.one .doc-head{padding:10mm 12mm 7mm}
-  .doc-head .ragbox{box-shadow:none;border:1px solid rgba(0,0,0,.08)}
-  .doc.one .doc-head .doc-brand{margin-bottom:7px}
-  .doc.one .doc-head h2{font-size:14.5px;max-width:54ch;line-height:1.2}
-  .doc.one .doc-head p{font-size:10px;margin-top:5px!important}
-  .doc.one .doc-head .ragbox{padding:8px 13px;min-width:128px}
-  .doc.one .doc-head .ragbox .rv{font-size:13px}
-  .doc.one .doc-sec{margin-top:9px}
-  .doc.one .doc-sec>h3{font-size:9.5px;padding-top:7px;margin-bottom:6px}
-  .doc.one .doc-sec.band{padding:9px 12px 10px}
-  .doc.one p{font-size:10px;line-height:1.42}
+/* The one-pager is laid out as a real 210mm sheet, on screen and on paper
+   alike, so the height measured in the browser is the height that prints —
+   which lets the page box be sized to the content and never break. */
+.doc.one.sheet{width:210mm;max-width:210mm;margin:0 auto}
+
+  .doc.one.sheet{font-size:9.5px}
+  .doc.one.sheet .doc-body{padding:0 12mm}
+  .doc.one.sheet .doc-head{padding:10mm 12mm 7mm}
+  .doc.one.sheet .doc-head .ragbox{box-shadow:none;border:1px solid rgba(0,0,0,.08)}
+  .doc.one.sheet .doc-head .doc-brand{margin-bottom:7px}
+  .doc.one.sheet .doc-head h2{font-size:14.5px;max-width:54ch;line-height:1.2}
+  .doc.one.sheet .doc-head p{font-size:10px;margin-top:5px!important}
+  .doc.one.sheet .doc.one.sheet .doc-head .ragbox{padding:8px 13px;min-width:128px}
+  .doc.one.sheet .doc.one.sheet .doc-head .ragbox .rv{font-size:13px}
+  .doc.one.sheet .doc-sec{margin-top:9px}
+  .doc.one.sheet .doc-sec>h3{font-size:9.5px;padding-top:7px;margin-bottom:6px}
+  .doc.one.sheet .doc-sec.band{padding:9px 12px 10px}
+  .doc.one.sheet p{font-size:10px;line-height:1.42}
   .op-kpi{margin-top:9px;gap:7px}
   .op-kpi .tile{padding:8px 10px;border-top-width:2.5px}
   .op-kpi .tile .tv{font-size:19px}
@@ -895,12 +898,14 @@ tbody tr:hover{background:var(--surface-2)}
   .op-list li{font-size:9.5px;margin-bottom:3px;padding-left:13px;line-height:1.38}
   .op-list li::before{width:5px;height:5px;left:1px;top:5px}
   .op-empty{font-size:9.5px}
-  .doc.one .doc-foot{margin:9mm 0 0;padding:7mm 12mm;border-radius:0}
-  .doc.one .doc-foot .ff{font-size:10.5px} .doc.one .doc-foot .fv{font-size:7.5px}
-  .doc.one .doc-sec,.doc.one .op-box,.doc.one .op-p{break-inside:avoid}
-  .doc.one.landscape .op-flow{columns:2;column-gap:14px}
-  .doc.one.landscape .op-flow>.doc-sec{margin-bottom:9px}
-  .doc.one.landscape .op-kpi{margin-top:8px}
+  .doc.one.sheet .doc-foot{margin:9mm 0 0;padding:7mm 12mm;border-radius:0}
+  .doc.one.sheet .doc-foot .ff{font-size:10.5px} .doc.one.sheet .doc-foot .fv{font-size:7.5px}
+  .doc.one.sheet .doc-sec,.doc.one.sheet .op-box,.doc.one.sheet .op-p{break-inside:avoid}
+  .doc.one.sheet.landscape .op-flow{columns:2;column-gap:14px}
+  .doc.one.sheet.landscape .op-flow>.doc-sec{margin-bottom:9px}
+  .doc.one.sheet.landscape .op-kpi{margin-top:8px
+@media print{ .doc.one.sheet{width:auto;max-width:none;margin:0} }
+
 }
 
 </style>
@@ -3138,13 +3143,20 @@ function touchReport(r) {
     is rewritten into its own style element whenever the choice changes. */
 function applyOrientation() {
   const one = !RPT || (RPT.layout || 'one') === 'one';
-  const o = (!one && RPT.orient === 'landscape') ? 'landscape' : 'portrait';
   let st = document.getElementById('pageStyle');
   if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); }
-  // no page margin at all: the banner and the closing band run to the paper
-  // edge, and the document sets its own gutters — a designed sheet, not a
-  // word-processor printout
-  st.textContent = `@page{size:A4 ${o};margin:0}`;
+  // No page margin at all: the banner and the closing band run to the paper
+  // edge and the document sets its own gutters — a designed sheet, not a
+  // word-processor printout.
+  if (one) {
+    // the sheet is already 210mm wide on screen, so its rendered height is
+    // the height of the page: size the page box to it and nothing can break
+    const doc = document.getElementById('reportDoc');
+    const mm = doc ? Math.ceil(doc.getBoundingClientRect().height * 25.4 / 96) + 3 : 297;
+    st.textContent = `@page{size:210mm ${clamp(mm, 180, 2000)}mm;margin:0}`;
+  } else {
+    st.textContent = `@page{size:A4 ${RPT.orient === 'landscape' ? 'landscape' : 'portrait'};margin:0}`;
+  }
 }
 
 /** The brand band that opens and closes the report. */
@@ -3291,6 +3303,9 @@ function renderReport() {
         <button class="btn" id="rptRecompose">Compose from data</button>
         <button class="btn primary" id="rptPrint">Print / save as PDF</button>
         <div class="src" style="flex-basis:100%;text-align:right;margin-top:4px">
+          ${(RPT.layout || 'one') === 'one'
+            ? 'The one-pager prints as a single continuous page, however long it runs — no page breaks.'
+            : 'The full report paginates onto A4.'}
           In the print dialog turn <strong>Headers and footers</strong> off and
           <strong>Background graphics</strong> on for a clean full-bleed PDF.</div>
       </div>
@@ -3328,7 +3343,7 @@ function renderReport() {
   </div>
 
   <div class="doc${(RPT.layout || 'one') !== 'one' && RPT.orient === 'landscape' ? ' landscape' : ''}${
-    (RPT.layout || 'one') === 'one' ? ' one' : ''}" id="reportDoc">
+    (RPT.layout || 'one') === 'one' ? ' one sheet' : ''}" id="reportDoc">
     ${(RPT.layout || 'one') === 'one' ? reportOnePager(f) : `
     <div class="doc-head">
       <div>
