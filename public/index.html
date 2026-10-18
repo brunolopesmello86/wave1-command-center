@@ -1500,6 +1500,7 @@ function allWork() {
     for (const a of D.activityTemplate) {
       const id = p.id + '-' + a.id;
       const o = ov[id] || {};
+      if (o.removed) continue;          // taken off this pilot's board
       out.push({
         id, pilot: p.id, pilotShort: p.short, project: p.projectName || '', act: a.id, phase: a.phase,
         title: a.title, role: a.role, output: a.output, gate: a.gate,
@@ -1517,6 +1518,8 @@ function allWork() {
   return out;
 }
 function getWork(id) { return allWork().find(w => w.id === id); }
+/** cards taken off a single pilot's board — kept so they can be put back */
+function removedCards() { return (D.work || []).filter(w => w.removed); }
 /** write an override — only the fields that differ from the template */
 function setWork(id, patch) {
   const ov = ovMap();
@@ -1819,6 +1822,8 @@ function renderBacklog() {
         <div class="row" style="align-self:flex-end">
           ${late ? `<span class="badge b-r">${late} overdue</span>` : ''}
           <span class="badge b-n">${items.length} of ${allWork().length}</span>
+          ${removedCards().length ? `<button class="btn sm" id="restoreCards"
+            title="Cards taken off a single pilot's board">${removedCards().length} removed · restore</button>` : ''}
           <button class="btn sm" id="clearF">Clear filters</button>
           <button class="btn sm primary" id="addWork">＋ Add activity</button>
         </div>
@@ -1928,6 +1933,16 @@ function openCard(id) {
       <textarea data-w="${id}" data-wf="blocker" placeholder="What is stopping this, and who can unblock it.">${esc(w.blocker)}</textarea></div>
     <div><span class="lbl">Notes</span>
       <textarea data-w="${id}" data-wf="notes" placeholder="Progress notes, decisions, links.">${esc(w.notes)}</textarea></div>
+    <div class="card"><header><h3>Remove this activity</h3></header><div class="body tight">
+      <p class="src" style="margin:0 0 9px">This card is lifecycle activity <strong>${esc(w.act)}</strong> on
+        <strong>${esc(p ? p.short : w.pilot)}</strong>. The same activity exists on
+        ${D.pilots.length - 1} other pilot${D.pilots.length === 2 ? '' : 's'}.</p>
+      <div class="row">
+        <button class="btn danger sm" data-delcard="${id}">Remove from ${esc(p ? p.short : w.pilot)} only</button>
+        <button class="btn danger sm" data-delact="${esc(w.act)}">Remove from the plan — all ${D.pilots.length} pilots</button>
+      </div>
+    </div></div>
+
     <div class="card"><div class="body tight">
       <div class="src" style="display:grid;gap:4px">
         <div><strong style="color:var(--ink)">Accountable role</strong> — ${esc(w.role)}</div>
@@ -3801,6 +3816,34 @@ document.addEventListener('click', e => {
   if (t.dataset.clearblk) {
     setWork(t.dataset.clearblk, { blocker: '' });
     flash('Blocker note cleared.'); paint(); openCard(t.dataset.clearblk); return;
+  }
+  if (t.dataset.delcard) {
+    const w = getWork(t.dataset.delcard);
+    if (!w) return;
+    const p = D.pilots.find(x => x.id === w.pilot);
+    if (!confirm(`Take ${w.act} "${w.title}" off ${p ? p.short : w.pilot}?\n\n` +
+      'It stays on every other pilot, and you can put it back from the board toolbar.')) return;
+    setWork(t.dataset.delcard, { removed: true });
+    logUpdate(`${p ? p.short : w.pilot} · ${w.act} removed from the board`, w.title, 'a', w.act);
+    closeDrawer(); paint(); return;
+  }
+  if (t.dataset.delact) {
+    const act = D.activityTemplate.find(a => a.id === t.dataset.delact);
+    if (!act) return;
+    if (!confirm(`Remove ${act.id} "${act.title}" from the plan?\n\n` +
+      `That is ${D.pilots.length} cards, one per pilot, and any status, owner or notes on them. This cannot be undone.`)) return;
+    D.activityTemplate = D.activityTemplate.filter(a => a.id !== act.id);
+    Store.saveTemplate();
+    for (const w of (D.work || []).filter(x => String(x.id).endsWith('-' + act.id))) Store.remove('work', w.id);
+    D.work = (D.work || []).filter(x => !String(x.id).endsWith('-' + act.id));
+    logUpdate(`${act.id} removed from the plan`, act.title + ` — ${D.pilots.length} cards`, 'r', act.id);
+    closeDrawer(); paint(); return;
+  }
+  if (t.id === 'restoreCards') {
+    const gone = removedCards();
+    if (!gone.length || !confirm(`Put ${gone.length} removed card${gone.length === 1 ? '' : 's'} back on the board?`)) return;
+    for (const w of gone) setWork(w.id, { removed: false });
+    flash(`${gone.length} card${gone.length === 1 ? '' : 's'} restored.`); paint(); return;
   }
   if (t.dataset.card) { openCard(t.dataset.card); return; }
   if (t.id === 'clearF') { F.pilot = F.phase = F.owner = F.q = ''; paint(); return; }
