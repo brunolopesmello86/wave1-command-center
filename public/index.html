@@ -605,6 +605,23 @@ body{background:var(--bg)}
 .masthead .themebtn:hover{background:rgba(255,255,255,.16);color:#fff}
 .themebtn .ticon{font-size:12px;line-height:1}
 
+/* ── risks: matrix beside the register ──── */
+.riskwrap{display:grid;grid-template-columns:minmax(290px,380px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:1080px){.riskwrap{grid-template-columns:1fr}}
+.riskwrap .rm{max-width:none}
+.riskwrap .rm-dot{width:26px;height:26px;font-size:10.5px}
+.riskwrap .rm-grid{gap:4px}
+.risktbl td{vertical-align:middle;padding:6px 8px}
+.risktbl th{padding:7px 8px}
+.risktbl tr{cursor:pointer}
+.risktbl select,.risktbl input{padding:4px 6px;font-size:12px}
+.risktbl .rnum{display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;
+  color:#fff;font-family:var(--mono);font-size:10px;font-weight:700}
+.risktbl .closedrow{opacity:.5}
+.risktbl select.sev-H{color:var(--rose);font-weight:700}
+.risktbl select.sev-M{color:var(--amber);font-weight:700}
+.risktbl tr.flash td{background:var(--green-soft);transition:background .3s}
+
 /* ── board lanes ────────────────────────── */
 .lane{margin-bottom:14px}
 .lane .kb{padding-bottom:4px}
@@ -2876,31 +2893,7 @@ function traineeTable() {
     </div></div>`;
 }
 
-/* ══ 8 · RISKS & ISSUES ════════════════════════════════════════════ */
-function renderRisks() {
-  const el = $('#panel-risks');
-  const open = D.risks.filter(r => r.status === 'open');
-  el.innerHTML = `<div class="stack">
-    <div class="tiles">
-      <div class="tile acc r"><div class="tl">High</div><div class="tv">${open.filter(r => r.sev === 'H').length}</div>
-        <div class="ts">open, severity high</div></div>
-      <div class="tile acc a"><div class="tl">Medium</div><div class="tv">${open.filter(r => r.sev === 'M').length}</div>
-        <div class="ts">open, severity medium</div></div>
-      <div class="tile acc"><div class="tl">Low</div><div class="tv">${open.filter(r => r.sev === 'L').length}</div>
-        <div class="ts">open, severity low</div></div>
-      <div class="tile acc b"><div class="tl">Closed</div>
-        <div class="tv">${D.risks.filter(r => r.status === 'closed').length}</div>
-        <div class="ts">of ${D.risks.length} raised</div></div>
-    </div>
-    ${riskMatrix(open)}
-    ${riskTable(D.risks, 'All risks and issues', true)}
-  </div>`;
-}
-
-/* ── likelihood × impact matrix ─────────────────────────────────────
-   Cells shade from grey (low, low) to green (high, high) along the
-   diagonal; each open risk that has both scores sits in its cell as a
-   numbered dot, and the legend beside it carries the names.           */
+/* ══ 8 · RISKS & ISSUES ══════════════════════════════════════════ */
 function rmTone(l, i, dot) {
   const d = l + i - 2;                          // 0 (low·low) … 6 (high·high)
   if (d <= 1) return dot ? 'color-mix(in srgb,var(--faint) 85%,var(--ink))' : `color-mix(in srgb,var(--faint) ${d === 0 ? 34 : 22}%,var(--surface))`;
@@ -2908,81 +2901,124 @@ function rmTone(l, i, dot) {
   const pct = [0, 0, 0, 24, 40, 58, 78][d];
   return dot ? `color-mix(in srgb,var(--green) ${40 + d * 10}%,var(--ink))` : `color-mix(in srgb,var(--green) ${pct}%,var(--surface))`;
 }
-function riskMatrix(open) {
-  const placed = open.filter(r => r.likelihood >= 1 && r.impact >= 1)
+/* ══ RISKS & ISSUES ════════════════════════════════════════════════
+   The matrix shows where a risk sits; the table is where it is worked.
+   A dot and its row carry the same number, so the two read together. */
+const riskPlaced = r => r.likelihood >= 1 && r.impact >= 1;
+const SEV_OPTS = [['H', 'High'], ['M', 'Medium'], ['L', 'Low']];
+const RISK_STATUS = [['open', 'Open'], ['mitigating', 'Mitigating'], ['closed', 'Closed']];
+const SCORE_OPTS = [['0', '—'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']];
+
+function renderRisks() {
+  const el = $('#panel-risks');
+  const open = D.risks.filter(r => r.status === 'open');
+  const placed = open.filter(riskPlaced)
     .sort((a, b) => (b.likelihood + b.impact) - (a.likelihood + a.impact) || 'HML'.indexOf(a.sev) - 'HML'.indexOf(b.sev));
-  const unplaced = open.filter(r => !(r.likelihood >= 1 && r.impact >= 1));
   const num = {}; placed.forEach((r, i) => num[r.id] = i + 1);
+
+  el.innerHTML = `<div class="stack">
+    <div class="tiles">
+      <div class="tile ${open.some(r => r.sev === 'H') ? 'hot' : ''}"><div class="tl">High</div>
+        <div class="tv">${open.filter(r => r.sev === 'H').length}</div><div class="ts">open, severity high</div></div>
+      <div class="tile ${open.some(r => r.sev === 'M') ? 'warmish' : ''}"><div class="tl">Medium</div>
+        <div class="tv">${open.filter(r => r.sev === 'M').length}</div><div class="ts">open, severity medium</div></div>
+      <div class="tile acc"><div class="tl">Low</div>
+        <div class="tv">${open.filter(r => r.sev === 'L').length}</div><div class="ts">open, severity low</div></div>
+      <div class="tile acc b"><div class="tl">Closed</div>
+        <div class="tv">${D.risks.filter(r => r.status === 'closed').length}</div>
+        <div class="ts">of ${D.risks.length} raised</div></div>
+    </div>
+    <div class="riskwrap">
+      ${riskMatrix(placed, num, open.length)}
+      ${riskTable(D.risks, 'All risks and issues', true, num)}
+    </div>
+  </div>`;
+}
+
+/** likelihood × impact, numbered to match the table beside it */
+function riskMatrix(placed, num, openCount) {
   const dot = r => `<button class="rm-dot" style="background:${rmTone(r.likelihood, r.impact, true)}"
     data-riskjump="${esc(r.id)}" title="${esc(r.name)}" aria-label="Risk ${num[r.id]}: ${esc(r.name)}">${num[r.id]}</button>`;
   let cells = '';
   for (let i = 4; i >= 1; i--) for (let l = 1; l <= 4; l++) {
     const here = placed.filter(r => r.likelihood === l && r.impact === i);
-    cells += `<div class="rm-cell" style="background:${rmTone(l, i, false)}" title="Likelihood ${l} · Impact ${i}">${here.map(dot).join('')}</div>`;
+    cells += `<div class="rm-cell" style="background:${rmTone(l, i, false)}"
+      title="Likelihood ${l} · Impact ${i}">${here.map(dot).join('')}</div>`;
   }
-  return `<div class="card">
-    <header><h2>Risk matrix</h2><span class="hint">${placed.length} of ${open.length} open risks placed · click a dot to jump to the risk</span></header>
+  return `<div class="card"><header><h2>Risk matrix</h2>
+      <span class="hint">${placed.length} of ${openCount} placed</span></header>
     <div class="body">
-      <p class="src" style="margin:0 0 12px;font-size:12px">Open risks by likelihood and impact. Set both scores on a risk below and it appears here.</p>
-      <div style="display:grid;grid-template-columns:minmax(280px,520px) minmax(240px,1fr);gap:22px;align-items:start">
-        <div class="rm">
-          <div class="rm-y"><span>Low</span>Impact<span>High</span></div>
-          <div class="rm-grid">${cells}</div>
-          <div class="rm-x"><span>Low</span>Likelihood<span>High</span></div>
-        </div>
-        <div class="rm-legend">
-          ${placed.length ? placed.map(r => `<div class="rm-item" data-riskjump="${esc(r.id)}">${dot(r)}
-            <div style="min-width:0"><div style="font-size:13px;font-weight:700">${esc(r.name)}</div>
-              <div class="src">${esc(r.id)} · ${esc(r.owner || 'no owner')}${r.mitigation ? ' — ' + esc(r.mitigation.length > 110 ? r.mitigation.slice(0, 108) + '…' : r.mitigation) : ''}</div></div></div>`).join('')
-            : '<p class="src" style="margin:4px">No risk has both scores yet.</p>'}
-          ${unplaced.length ? `<div style="margin-top:6px"><span class="lbl">Not placed yet — ${unplaced.length}</span>
-            <div class="row" style="gap:5px">${unplaced.map(r => `<button class="btn sm" data-riskjump="${esc(r.id)}"
-              title="${esc(r.name)}"><span class="badge ${r.sev === 'H' ? 'b-r' : r.sev === 'M' ? 'b-a' : 'b-n'}" style="padding:0 5px">${esc(r.sev)}</span> ${esc(r.name.length > 34 ? r.name.slice(0, 32) + '…' : r.name)}</button>`).join('')}</div></div>` : ''}
-        </div>
+      <div class="rm">
+        <div class="rm-y"><span>Low</span>Impact<span>High</span></div>
+        <div class="rm-grid">${cells}</div>
+        <div class="rm-x"><span>Low</span>Likelihood<span>High</span></div>
       </div>
+      <p class="src" style="margin:12px 0 0">Numbers match the table. Set both scores on a risk and it
+        appears here; click a dot to find its row.</p>
     </div></div>`;
 }
 
-function riskTable(rows, title, addable) {
+/** The register, worked as a table: the short fields edit in place, the rest
+    opens in a drawer so the long text has room. */
+function riskTable(rows, title, addable, num) {
   const sorted = rows.slice().sort((a, b) =>
-    (a.status === 'closed') - (b.status === 'closed') || 'HML'.indexOf(a.sev) - 'HML'.indexOf(b.sev));
-  return `<div class="card">
-    <header><h2>${esc(title)}</h2>
-      ${addable ? '<button class="btn sm primary" id="addRisk">＋ Raise a risk</button>' : ''}</header>
-    <div class="body">${sorted.length ? `<div style="display:grid;gap:10px">${sorted.map(r => `
-      <div class="erow" id="risk-${esc(r.id)}" style="${r.status === 'closed' ? 'opacity:.6' : ''}">
-        <div class="erow-top">
-          <div class="row" style="gap:7px">
-            <span class="chip mono">${esc(r.id)}</span>
-            <span class="badge ${r.sev === 'H' ? 'b-r' : r.sev === 'M' ? 'b-a' : 'b-n'}">${esc(r.sev)}</span>
-            <span class="badge ${r.type === 'Adoption' ? 'b-v' : 'b-b'}">${esc(r.type)}</span>
-            <strong style="font-size:13px">${esc(r.name)}</strong>
-          </div>
-          <div class="row">
-            <select data-r="${r.id}" data-rf="sev" style="width:auto">${opts([['H', 'High'], ['M', 'Medium'], ['L', 'Low']], r.sev)}</select>
-            <select data-r="${r.id}" data-rf="status" style="width:auto">${opts([['open', 'Open'], ['mitigating', 'Mitigating'], ['closed', 'Closed']], r.status)}</select>
-            <button class="btn ghost sm" data-delrisk="${r.id}">Remove</button>
-          </div>
-        </div>
-        <div class="grid g2">
-          <div><span class="lbl">Risk</span><input type="text" data-r="${r.id}" data-rf="name" value="${esc(r.name)}"></div>
-          <div><span class="lbl">Owner</span><input type="text" data-r="${r.id}" data-rf="owner" value="${esc(r.owner)}"></div>
-        </div>
-        <div><span class="lbl">What it looks like</span>
-          <textarea data-r="${r.id}" data-rf="desc">${esc(r.desc)}</textarea></div>
-        <div><span class="lbl">Mitigation</span>
-          <textarea data-r="${r.id}" data-rf="mitigation">${esc(r.mitigation)}</textarea></div>
-        <div class="grid g5">
-          <div><span class="lbl">Likelihood</span><select data-r="${r.id}" data-rf="likelihood">${opts([['0', '— not set'], ['1', '1 · Low'], ['2', '2'], ['3', '3'], ['4', '4 · High']], r.likelihood || 0)}</select></div>
-          <div><span class="lbl">Impact</span><select data-r="${r.id}" data-rf="impact">${opts([['0', '— not set'], ['1', '1 · Low'], ['2', '2'], ['3', '3'], ['4', '4 · High']], r.impact || 0)}</select></div>
-          <div><span class="lbl">Type</span><select data-r="${r.id}" data-rf="type">${opts(['Delivery', 'Adoption', 'Technical', 'Commercial', 'Resource'], r.type)}</select></div>
-          <div><span class="lbl">Related pilot</span>
-            <select data-r="${r.id}" data-rf="pilot">${opts([['', 'Wave-level']].concat(D.pilots.map(p => [p.id, p.short])), r.pilot)}</select></div>
-          <div><span class="lbl">Review by</span><input type="date" data-r="${r.id}" data-rf="due" value="${esc(r.due)}"></div>
-        </div>
-      </div>`).join('')}</div>` : '<div class="empty"><strong>No risks recorded</strong>Raise one as soon as it is real.</div>'}
-    </div></div>`;
+    (a.status === 'closed') - (b.status === 'closed') ||
+    'HML'.indexOf(a.sev) - 'HML'.indexOf(b.sev) || String(a.id).localeCompare(String(b.id)));
+  return `<div class="card"><header><h2>${esc(title)}</h2>
+      <div class="row"><span class="hint">${sorted.filter(r => r.status !== 'closed').length} open</span>
+      ${addable ? '<button class="btn sm primary" id="addRisk">＋ Raise a risk</button>' : ''}</div></header>
+    ${sorted.length ? `<div class="tscroll"><table class="risktbl">
+      <thead><tr>
+        ${num ? '<th style="width:34px" title="Matches the matrix">#</th>' : ''}
+        <th>Risk</th><th style="width:92px">Severity</th><th style="width:112px">Status</th>
+        <th style="width:62px" title="Likelihood">Lik.</th><th style="width:62px" title="Impact">Imp.</th>
+        <th style="width:150px">Owner</th><th style="width:34px"></th></tr></thead>
+      <tbody>${sorted.map(r => `<tr id="risk-${esc(r.id)}" data-openrisk="${esc(r.id)}"
+          class="${r.status === 'closed' ? 'closedrow' : ''}">
+        ${num ? `<td class="r">${num[r.id] ? `<span class="rnum" style="background:${
+          rmTone(r.likelihood, r.impact, true)}">${num[r.id]}</span>` : '<span class="src">—</span>'}</td>` : ''}
+        <td><div style="font-weight:600;font-size:12.5px">${esc(r.name)}</div>
+          <div class="src"><span class="mono">${esc(r.id)}</span> · ${esc(r.type)}${
+            r.pilot ? ' · ' + esc((D.pilots.find(p => p.id === r.pilot) || {}).short || r.pilot) : ' · wave-level'}${
+            r.mitigation ? '' : ' · <span style="color:var(--amber)">no mitigation</span>'}</div></td>
+        <td><select data-r="${r.id}" data-rf="sev" class="sev-${esc(r.sev)}">${opts(SEV_OPTS, r.sev)}</select></td>
+        <td><select data-r="${r.id}" data-rf="status">${opts(RISK_STATUS, r.status)}</select></td>
+        <td><select data-r="${r.id}" data-rf="likelihood">${opts(SCORE_OPTS, r.likelihood || 0)}</select></td>
+        <td><select data-r="${r.id}" data-rf="impact">${opts(SCORE_OPTS, r.impact || 0)}</select></td>
+        <td><input type="text" data-r="${r.id}" data-rf="owner" value="${esc(r.owner)}" placeholder="Owner"></td>
+        <td><button class="btn ghost sm" data-openrisk="${esc(r.id)}" title="Open the full risk">›</button></td>
+      </tr>`).join('')}</tbody></table></div>`
+      : '<div class="body"><div class="empty"><strong>No risks recorded</strong>Raise one as soon as it is real.</div></div>'}
+  </div>`;
 }
+
+/** The whole risk, including the two long fields a table cannot hold. */
+function openRisk(id) {
+  const r = D.risks.find(x => x.id === id);
+  if (!r) return;
+  drawer(`Risk ${r.id}${riskPlaced(r) ? ` · likelihood ${r.likelihood} × impact ${r.impact}` : ''}`, r.name, `
+    <div><span class="lbl">Risk</span><input type="text" data-r="${id}" data-rf="name" value="${esc(r.name)}"></div>
+    <div class="grid g2">
+      <div><span class="lbl">Severity</span><select data-r="${id}" data-rf="sev">${opts(SEV_OPTS, r.sev)}</select></div>
+      <div><span class="lbl">Status</span><select data-r="${id}" data-rf="status">${opts(RISK_STATUS, r.status)}</select></div>
+      <div><span class="lbl">Likelihood</span><select data-r="${id}" data-rf="likelihood">${opts(SCORE_OPTS, r.likelihood || 0)}</select></div>
+      <div><span class="lbl">Impact</span><select data-r="${id}" data-rf="impact">${opts(SCORE_OPTS, r.impact || 0)}</select></div>
+      <div><span class="lbl">Type</span><select data-r="${id}" data-rf="type">${
+        opts(['Delivery', 'Adoption', 'Technical', 'Commercial', 'Resource'], r.type)}</select></div>
+      <div><span class="lbl">Related pilot</span><select data-r="${id}" data-rf="pilot">${
+        opts([['', 'Wave-level']].concat(D.pilots.map(p => [p.id, p.short])), r.pilot)}</select></div>
+      <div><span class="lbl">Owner</span><input type="text" data-r="${id}" data-rf="owner" value="${esc(r.owner)}"></div>
+      <div><span class="lbl">Review by</span><input type="date" data-r="${id}" data-rf="due" value="${esc(r.due)}"></div>
+    </div>
+    <div><span class="lbl">What it looks like</span>
+      <textarea data-r="${id}" data-rf="desc" style="min-height:84px">${esc(r.desc)}</textarea></div>
+    <div><span class="lbl">Mitigation</span>
+      <textarea data-r="${id}" data-rf="mitigation" style="min-height:96px">${esc(r.mitigation)}</textarea></div>
+    <div class="row"><span class="src">Raised ${esc(fmtD(r.raised) || '—')}</span><span class="spacer"></span>
+      <button class="btn danger sm" data-delrisk="${id}">Remove from the register</button></div>
+  `);
+}
+
 /* ══ 9 · FRIDAY EXECUTIVE REPORT ═══════════════════════════════════
    Composed from the week's data, then edited. The narrative fields are
    the only thing typed; every figure comes from the other views.     */
@@ -3693,7 +3729,10 @@ function openDeliv() { go('deliv'); }
 
 /* ══ EVENTS ════════════════════════════════════════════════════════ */
 document.addEventListener('click', e => {
-  const t = e.target.closest('button, tr[data-openpilot], tr[data-opendeliv], [data-card], [data-openev], [data-openms], [data-riskjump], .sessrow-p');
+  // a click on a control inside a row edits that field; it must not also
+  // open the row's drawer
+  if (e.target.closest('input, select, textarea')) return;
+  const t = e.target.closest('button, tr[data-openpilot], tr[data-opendeliv], tr[data-openrisk], [data-card], [data-openev], [data-openms], [data-riskjump], .sessrow-p');
   if (!t) return;
 
   if (t.classList.contains('tab')) { go(t.dataset.t); return; }
@@ -3879,19 +3918,20 @@ document.addEventListener('click', e => {
   if (t.dataset.riskjump) {
     const row = document.getElementById('risk-' + t.dataset.riskjump);
     if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      row.style.outline = '2px solid var(--green-bright)'; setTimeout(() => { row.style.outline = ''; }, 1600); }
+      row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1700); }
     return;
   }
+  if (t.dataset.openrisk) { openRisk(t.dataset.openrisk); return; }
   if (t.id === 'addRisk') {
     const r = { id: uid('R'), sev: 'M', type: 'Delivery', name: 'New risk', desc: '', mitigation: '',
       owner: '', status: 'open', pilot: '', due: '', raised: todayISO(), likelihood: 0, impact: 0 };
     D.risks.push(r); Store.save('risks', r);
-    logUpdate('Risk raised', r.name, 'a', r.id); paint(); return;
+    logUpdate('Risk raised', r.name, 'a', r.id); paint(); openRisk(r.id); return;
   }
   if (t.dataset.delrisk) {
     if (!confirm('Remove this risk from the register?')) return;
     D.risks = D.risks.filter(x => x.id !== t.dataset.delrisk);
-    Store.remove('risks', t.dataset.delrisk); paint(); return;
+    Store.remove('risks', t.dataset.delrisk); closeDrawer(); paint(); return;
   }
 
   /* — executive — */
