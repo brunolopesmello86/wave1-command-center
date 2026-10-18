@@ -548,14 +548,14 @@ body{background:var(--bg)}
 .subtabs button[aria-pressed="true"] .cnt{background:var(--green-soft);color:var(--green)}
 
 /* ── the pilot rail ─────────────────────── */
+.railcard>.body{background:color-mix(in srgb,var(--green) 9%,var(--surface));border-radius:0 0 11px 11px}
 .railrow{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 9px;
-  align-items:center;width:100%;text-align:left;font:inherit;cursor:pointer;border:1px solid var(--line-soft);
-  background:var(--surface);border-radius:10px;padding:9px 11px;transition:border-color .12s,background .12s}
-.railrow:hover{border-color:var(--faint)}
-.railrow.sel{border-color:color-mix(in srgb,var(--green) 45%,transparent);background:var(--surface);
-  box-shadow:0 1px 2px rgba(18,36,26,.05),0 8px 18px -14px rgba(18,36,26,.3)}
-.railrow.sel::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:4px;
-  border-radius:0 3px 3px 0;background:var(--green)}
+  align-items:center;width:100%;text-align:left;font:inherit;cursor:pointer;
+  border:1px solid transparent;background:transparent;border-radius:10px;padding:9px 11px;
+  transition:border-color .12s,background .12s,box-shadow .12s}
+.railrow:hover{background:color-mix(in srgb,var(--surface) 55%,transparent)}
+.railrow.sel{background:var(--surface);border-color:var(--line-soft);
+  box-shadow:0 1px 2px rgba(18,36,26,.06),0 10px 22px -14px rgba(18,36,26,.35)}
 .railrow.off{opacity:.62}
 .railrow .rname{font-size:13px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .railrow .rproj{grid-column:2;font-size:11px;font-weight:600;color:var(--green);
@@ -566,6 +566,7 @@ body{background:var(--bg)}
 .railrow .rmeta{font-family:var(--mono);font-size:10px;color:var(--faint);flex:none}
 .railrow .rbar{flex:1;height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden;min-width:30px}
 .railrow .rbar i{display:block;height:100%;border-radius:2px;background:var(--green)}
+.railseg{background:var(--surface);border-color:var(--line-soft)}
 .railrow .roff{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
   padding:1px 6px;border-radius:4px;background:var(--surface-3);color:var(--faint);flex:none}
 
@@ -606,7 +607,20 @@ body{background:var(--bg)}
 .masthead .themebtn:hover{background:rgba(255,255,255,.16);color:#fff}
 .themebtn .ticon{font-size:12px;line-height:1}
 
+/* ── executive: pace against the plan ───── */
+.pace{font-family:var(--ui);font-weight:700;margin-left:5px}
+.pace.on{color:var(--green)}
+.pace.behind{color:var(--amber)}
+.pace.late{color:var(--rose)}
+.bar.n>i{background:var(--faint)}
+tr.offrow{background:color-mix(in srgb,var(--rose) 5%,transparent)}
+tr.offrow td{color:var(--muted)}
+tr.offrow:hover{background:color-mix(in srgb,var(--rose) 9%,transparent)}
+
 /* ── risks: matrix beside the register ──── */
+.rm-scale{display:flex;margin-top:13px;border-radius:6px;overflow:hidden;border:1px solid var(--line-soft)}
+.rm-sw{flex:1;padding:4px 2px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:#2F3D35}
 .riskwrap{display:grid;grid-template-columns:minmax(290px,380px) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:1080px){.riskwrap{grid-template-columns:1fr}}
 .riskwrap .rm{max-width:none}
@@ -1532,6 +1546,18 @@ function overallProgress() {
 const isActive = p => p && p.active !== false;
 function activePilots() { return D.pilots.filter(isActive); }
 
+/** How far a pilot is from where the plan expects it to be this week:
+    activities whose planned end week has passed, against those actually done. */
+function pilotPace(pid) {
+  const wk = currentWeek();
+  const items = allWork().filter(w => w.pilot === pid);
+  if (!items.length) return { pct: 0, target: 0, gap: 0, state: 'on' };
+  const target = Math.round(items.filter(w => w.endWk <= wk).length / items.length * 100);
+  const pct = Math.round(items.filter(w => w.status === 'done').length / items.length * 100);
+  const gap = target - pct;
+  return { pct, target, gap, state: gap <= 5 ? 'on' : gap <= 20 ? 'behind' : 'late' };
+}
+
 function ragOf(v) { return { G: 'Green', A: 'Amber', R: 'Red', N: 'Not set' }[v] || 'Not set'; }
 function ragCls(v) { return { G: 'b-g', A: 'b-a', R: 'b-r' }[v] || 'b-n'; }
 function dueClass(d, status) {
@@ -1659,14 +1685,18 @@ function renderExec() {
               <th class="r">Done</th><th class="r">Blocked</th><th>RAG</th><th>Next step</th></tr></thead>
             <tbody>${D.pilots.map(p => {
               const pr = pilotProgress(p.id);
-              return `<tr data-openpilot="${p.id}" style="cursor:pointer${isActive(p) ? '' : ';opacity:.55'}">
+              const pace = pilotPace(p.id);
+              return `<tr data-openpilot="${p.id}" class="${isActive(p) ? '' : 'offrow'}" style="cursor:pointer">
                 <td><div style="font-weight:600">${esc(p.short)}${
-                  isActive(p) ? '' : ' <span class="badge b-n">Not activated</span>'}</div>
+                  isActive(p) ? '' : ' <span class="badge b-r">Not activated</span>'}</div>
                   ${p.projectName ? `<div style="font-size:11px;color:var(--green);font-weight:600">${esc(p.projectName)}</div>` : ''}
                   <div class="src mono">${p.id}${p.jiraRef ? ' · ' + esc(p.jiraRef) : ' · ' + esc(p.jiraKey)}</div></td>
                 <td><span class="badge ${p.area === 'CS' ? 'b-b' : 'b-t'}">${p.area}</span></td>
                 <td style="font-size:11.5px">${esc(p.phase)}</td>
-                <td>${bar(pr.pct, pr.blocked ? 'r' : '')}<div class="src mono" style="margin-top:3px">${pr.pct}%</div></td>
+                <td>${bar(pr.pct, !isActive(p) ? 'n' : pace.state === 'late' ? 'r' : pace.state === 'behind' ? 'a' : '')}
+                  <div class="src mono" style="margin-top:3px">${pr.pct}%${
+                    isActive(p) && pace.gap > 5 ? `<span class="pace ${pace.state}"> ${pace.gap}% behind</span>`
+                      : isActive(p) && pace.target ? `<span class="pace on"> on pace</span>` : ''}</div></td>
                 <td class="r mono">${pr.done}/${pr.total}</td>
                 <td class="r mono" style="${pr.blocked ? 'color:var(--rose);font-weight:700' : 'color:var(--faint)'}">${pr.blocked || '–'}</td>
                 <td><span class="badge ${ragCls(p.rag)}">${p.rag === 'N' ? '—' : p.rag}</span></td>
@@ -2282,10 +2312,10 @@ function renderPilots() {
 
   el.innerHTML = `<div style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;align-items:start">
     <div class="stack noprint">
-      <div class="card"><header><h3>Pilots</h3>
+      <div class="card railcard"><header><h3>Pilots</h3>
           <span class="hint">${nOn} active${nOff ? ` · ${nOff} off` : ''}</span></header>
         <div class="body tight" style="display:grid;gap:8px">
-          <div class="seg" style="width:100%">${[['all', 'All'], ['active', 'Active'], ['off', 'Off']].map(([k, l]) =>
+          <div class="seg railseg" style="width:100%">${[['all', 'All'], ['active', 'Active'], ['off', 'Off']].map(([k, l]) =>
             `<button type="button" data-rail="${k}" aria-pressed="${railFilter === k}" style="flex:1">${l}</button>`).join('')}</div>
           ${rail}
         </div></div>
@@ -2899,20 +2929,22 @@ function traineeTable() {
 }
 
 /* ══ 8 · RISKS & ISSUES ══════════════════════════════════════════ */
+/* Severity runs along the diagonal: likelihood + impact. Green at the quiet
+   corner, light blue then yellow across the middle, orange where both are
+   high. Only the two ends carry a strong colour, so the eye goes to them.
+   Contrast checked: white numbers clear 4.5:1 on every dot, and every dot
+   clears 3:1 against the cell it sits on. */
+const RM_CELL = ['#86CC9F', '#E3F3E7', '#D5E8F7', '#BBD8EF', '#FBF1C2', '#FAD6A8', '#F2932F'];
+const RM_DOT  = ['#11592A', '#19762F', '#15618F', '#15618F', '#7D5A0D', '#B5560A', '#7A3800'];
 function rmTone(l, i, dot) {
-  const d = l + i - 2;                          // 0 (low·low) … 6 (high·high)
-  if (d <= 1) return dot ? 'color-mix(in srgb,var(--faint) 85%,var(--ink))' : `color-mix(in srgb,var(--faint) ${d === 0 ? 34 : 22}%,var(--surface))`;
-  if (d === 2) return dot ? 'var(--faint)' : 'color-mix(in srgb,var(--green) 12%,var(--surface))';
-  const pct = [0, 0, 0, 24, 40, 58, 78][d];
-  return dot ? `color-mix(in srgb,var(--green) ${40 + d * 10}%,var(--ink))` : `color-mix(in srgb,var(--green) ${pct}%,var(--surface))`;
+  const d = clamp((l || 0) + (i || 0) - 2, 0, 6);
+  return (dot ? RM_DOT : RM_CELL)[d];
 }
-/* ══ RISKS & ISSUES ════════════════════════════════════════════════
-   The matrix shows where a risk sits; the table is where it is worked.
-   A dot and its row carry the same number, so the two read together. */
+
 const riskPlaced = r => r.likelihood >= 1 && r.impact >= 1;
 const SEV_OPTS = [['H', 'High'], ['M', 'Medium'], ['L', 'Low']];
 const RISK_STATUS = [['open', 'Open'], ['mitigating', 'Mitigating'], ['closed', 'Closed']];
-const SCORE_OPTS = [['0', '—'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']];
+const SCORE_OPTS = [['0', '\u2014'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']];
 
 function renderRisks() {
   const el = $('#panel-risks');
@@ -2940,7 +2972,7 @@ function renderRisks() {
   </div>`;
 }
 
-/** likelihood × impact, numbered to match the table beside it */
+/** likelihood x impact, numbered to match the table beside it */
 function riskMatrix(placed, num, openCount) {
   const dot = r => `<button class="rm-dot" style="background:${rmTone(r.likelihood, r.impact, true)}"
     data-riskjump="${esc(r.id)}" title="${esc(r.name)}" aria-label="Risk ${num[r.id]}: ${esc(r.name)}">${num[r.id]}</button>`;
@@ -2958,7 +2990,11 @@ function riskMatrix(placed, num, openCount) {
         <div class="rm-grid">${cells}</div>
         <div class="rm-x"><span>Low</span>Likelihood<span>High</span></div>
       </div>
-      <p class="src" style="margin:12px 0 0">Numbers match the table. Set both scores on a risk and it
+      <div class="rm-scale">
+        ${['Low', '', '', 'Medium', '', '', 'High'].map((lab, d) =>
+          `<span class="rm-sw" style="background:${RM_CELL[d]}" title="likelihood + impact = ${d + 2}">${esc(lab)}</span>`).join('')}
+      </div>
+      <p class="src" style="margin:9px 0 0">Numbers match the table. Set both scores on a risk and it
         appears here; click a dot to find its row.</p>
     </div></div>`;
 }
