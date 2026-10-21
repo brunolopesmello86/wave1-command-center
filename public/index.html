@@ -817,6 +817,26 @@ tbody tr:hover{background:var(--surface-2)}
   .doc .tile .tv{font-size:20pt}
 }
 
+/* ══ pilot status report ══════════════════════════════════════════ */
+.ps-tbl{table-layout:fixed}
+.ps-tbl td{vertical-align:top;padding:8px 10px}
+.ps-name{font-size:12px;font-weight:800;color:var(--o-navy);line-height:1.25}
+.ps-proj{font-size:11px;font-weight:700;color:var(--o-green);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps-id{font-family:var(--mono);font-size:9.5px;color:#8A9E92;margin-top:2px}
+.ps-phase{font-size:11px;color:#46564E}
+.ps-bar{height:5px;border-radius:3px;background:#E9F0EB;overflow:hidden}
+.ps-bar i{display:block;height:100%;border-radius:3px}
+.ps-pct{font-family:var(--mono);font-size:10px;color:#5A6B62;margin-top:4px;
+  font-variant-numeric:tabular-nums}
+.ps-pace{font-family:var(--ui);font-weight:700;margin-left:6px}
+.ps-pace.on{color:var(--o-green)} .ps-pace.behind{color:#B35C00} .ps-pace.late{color:#B23B32}
+.ps-blk{color:#B23B32;font-weight:800}
+.ps-next{font-size:11px;line-height:1.45;color:#33433C}
+.ps-off td{background:#FDF4F2!important}
+.ps-off .ps-name,.ps-off .ps-phase,.ps-off .ps-next{color:#8A9E92}
+.ps-off .ps-proj{color:#9BAFA3;font-style:italic}
+
 /* ══ one-pager ════════════════════════════════════════════════════ */
 /* a landscape sheet is short and wide, so the stack becomes two columns */
 .doc.one.landscape .op-flow{columns:2;column-gap:16px}
@@ -886,6 +906,15 @@ tbody tr:hover{background:var(--surface-2)}
 
   .doc.one.sheet{font-size:9.5px}
   .doc.one.sheet .doc-body{padding:0 12mm}
+  /* a ten-row table rarely fits whatever is left of a page — let the section
+     flow across the break, and keep each row whole instead */
+  .ps-sec{break-inside:auto!important;page-break-inside:auto!important}
+  .ps-sec thead{display:table-header-group}
+  .ps-tbl{font-size:9pt}
+  .ps-tbl td{padding:6px 8px;break-inside:avoid}
+  .ps-tbl tr{break-inside:avoid}
+  .ps-name{font-size:9.5pt} .ps-proj{font-size:8.5pt} .ps-id{font-size:7pt}
+  .ps-next,.ps-phase{font-size:8.5pt} .ps-pct{font-size:7.5pt}
   .doc.one.sheet .doc-head{padding:10mm 12mm 7mm}
   .doc.one.sheet .doc-head .ragbox{box-shadow:none;border:1px solid rgba(0,0,0,.08)}
   .doc.one.sheet .doc-head .doc-brand{margin-bottom:7px}
@@ -3330,6 +3359,76 @@ function reportOnePager(f) {
   ${docFooter(f)}`;
 }
 
+/** The pilot status board as its own report: one row per pilot, the state a
+    sponsor asks about, and nothing else. Reads the same figures as the
+    executive view, so the two can never disagree. */
+function reportPilotStatus(f) {
+  const rows = D.pilots.map(p => ({ p, pr: pilotProgress(p.id), pace: pilotPace(p.id) }));
+  const live = rows.filter(r => isActive(r.p));
+  const blocked = rows.reduce((s, r) => s + r.pr.blocked, 0);
+  const behind = live.filter(r => r.pace.gap > 5).length;
+
+  return `${docBanner(f)}
+  <div class="doc-body">
+
+    <div class="op-kpi" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+      <div class="tile t-green"><div class="tl">Pilots activated</div>
+        <div class="tv">${live.length}<small>/ ${rows.length}</small></div>
+        <div class="ts">${rows.length - live.length} stood down</div></div>
+      <div class="tile t-blue"><div class="tl">Wave progress</div>
+        <div class="tv">${f.progress.pct}<small>%</small></div>
+        <div class="ts">${f.progress.done} of ${f.progress.total} activities</div></div>
+      <div class="tile ${behind ? 't-amber' : ''}"><div class="tl">Behind plan</div>
+        <div class="tv">${behind}</div>
+        <div class="ts">of ${live.length} activated pilot${live.length === 1 ? '' : 's'}</div></div>
+      <div class="tile ${blocked ? 't-rose' : ''}"><div class="tl">Blocked</div>
+        <div class="tv">${blocked}</div>
+        <div class="ts">${blocked ? 'needs a decision' : 'nothing blocked'}</div></div>
+    </div>
+
+    <div class="doc-sec ps-sec"><h3>Pilot status</h3>
+      <table class="ps-tbl">
+        <thead><tr>
+          <th>Pilot</th><th style="width:54px">Area</th><th style="width:108px">Phase</th>
+          <th style="width:118px">Progress</th><th style="width:52px" class="r">Done</th>
+          <th style="width:58px" class="r">Blocked</th><th style="width:46px">RAG</th><th>Next step</th>
+        </tr></thead>
+        <tbody>${rows.map(({ p, pr, pace }) => `<tr class="${isActive(p) ? '' : 'ps-off'}">
+          <td>
+            <div class="ps-name">${esc(p.short)}${isActive(p) ? ''
+              : ' <span class="badge b-r">Not activated</span>'}</div>
+            ${p.projectName ? `<div class="ps-proj">${esc(p.projectName)}</div>` : ''}
+            <div class="ps-id">${p.id} · ${esc(p.jiraRef || p.jiraKey)}</div>
+          </td>
+          <td><span class="badge ${p.area === 'CS' ? 'b-b' : 'b-t'}">${esc(p.area)}</span></td>
+          <td class="ps-phase">${esc(p.phase)}</td>
+          <td>
+            <div class="ps-bar"><i style="width:${pr.pct}%;background:${
+              !isActive(p) ? 'var(--faint)' : pace.state === 'late' ? '#D4543F'
+                : pace.state === 'behind' ? '#EE7D00' : '#1F8A3F'}"></i></div>
+            <div class="ps-pct">${pr.pct}%${isActive(p) && pace.gap > 5
+              ? `<span class="ps-pace ${pace.state}">${pace.gap}% behind</span>`
+              : isActive(p) && pace.target ? '<span class="ps-pace on">on pace</span>' : ''}</div>
+          </td>
+          <td class="r mono">${pr.done}/${pr.total}</td>
+          <td class="r mono ${pr.blocked ? 'ps-blk' : ''}">${pr.blocked || '–'}</td>
+          <td><span class="badge ${ragCls(p.rag)}">${p.rag === 'N' ? '—' : p.rag}</span></td>
+          <td class="ps-next">${esc(p.nextStep || p.summary || '—')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+
+    ${f.blocked.length ? `<div class="doc-sec"><h3>Blocked — needs a decision</h3>
+      <table><thead><tr><th style="width:84px">Pilot</th><th style="width:54px">Ref</th>
+        <th>Activity</th><th>Blocker</th></tr></thead>
+        <tbody>${f.blocked.slice(0, 10).map(w => `<tr><td class="mono">${esc(w.pilotShort)}</td>
+          <td class="mono">${esc(w.act)}</td><td>${esc(w.title)}</td>
+          <td class="src">${esc(w.blocker || 'Not recorded')}</td></tr>`).join('')}</tbody></table></div>` : ''}
+
+  </div>
+  ${docFooter(f)}`;
+}
+
 function renderReport() {
   const el = $('#panel-report');
   RPT = reportFor(RPTDATE);
@@ -3345,7 +3444,7 @@ function renderReport() {
       <div style="min-width:135px"><span class="lbl">Report date — the day in the title</span>
         <input type="date" id="rptDay" value="${esc(RPT.day || RPT.to)}"></div>
       <div style="min-width:160px"><span class="lbl">Format</span>
-        <div class="seg">${[['one', 'One-pager'], ['full', 'Full report']].map(([k, l]) =>
+        <div class="seg">${[['one', 'One-pager'], ['pilots', 'Pilot status'], ['full', 'Full report']].map(([k, l]) =>
           `<button type="button" data-rlayout="${k}" aria-pressed="${(RPT.layout || 'one') === k}">${l}</button>`).join('')}</div></div>
       ${(RPT.layout || 'one') === 'one' ? `<div style="min-width:142px"><span class="lbl">Page orientation</span>
         <div class="src" style="padding-top:6px">Portrait — the one-pager is built for a single tall sheet</div></div>`
@@ -3364,7 +3463,9 @@ function renderReport() {
         <div class="src" style="flex-basis:100%;text-align:right;margin-top:4px">
           ${(RPT.layout || 'one') === 'one'
             ? 'The one-pager prints as a single continuous page, however long it runs — no page breaks.'
-            : 'The full report paginates onto A4.'}
+            : RPT.layout === 'pilots'
+              ? 'One row per pilot. Landscape suits the Next step column; a row is never split across pages.'
+              : 'The full report paginates onto A4.'}
           In the print dialog turn <strong>Headers and footers</strong> off and
           <strong>Background graphics</strong> on for a clean full-bleed PDF.</div>
       </div>
@@ -3403,7 +3504,8 @@ function renderReport() {
 
   <div class="doc${(RPT.layout || 'one') !== 'one' && RPT.orient === 'landscape' ? ' landscape' : ''}${
     (RPT.layout || 'one') === 'one' ? ' one sheet' : ''}" id="reportDoc">
-    ${(RPT.layout || 'one') === 'one' ? reportOnePager(f) : `
+    ${(RPT.layout || 'one') === 'one' ? reportOnePager(f)
+      : (RPT.layout === 'pilots') ? reportPilotStatus(f) : `
     ${docBanner(f)}
     <div class="doc-body">
 
