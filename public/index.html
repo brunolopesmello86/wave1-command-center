@@ -817,6 +817,69 @@ tbody tr:hover{background:var(--surface-2)}
   .doc .tile .tv{font-size:20pt}
 }
 
+/* ══ executive report — a steering sheet ══════════════════════════ */
+.doc.xrdoc{padding:0;background:#fff;max-width:1180px}
+.xr{padding:22px 26px 18px;font-family:var(--ui);color:#1A2B22}
+.xr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+  border-bottom:2px solid var(--o-green);padding-bottom:10px}
+.xr-top h1{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--o-green);margin:0}
+.xr-state{text-align:right;flex:none}
+.xr-pill{display:inline-block;padding:5px 15px;border-radius:999px;color:#fff;
+  font-size:11px;font-weight:800;letter-spacing:.1em}
+.xr-sub{display:block;margin-top:5px;font-size:12px;font-weight:700;color:#1A2B22}
+.xr-mission{background:var(--o-green);color:#fff;border-radius:7px;padding:12px 16px;margin-top:12px;
+  font-size:14px;font-weight:700;line-height:1.35}
+
+.xr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.xr-kpi{border:1px solid #E2EAE4;border-radius:9px;padding:11px 13px;background:#fff}
+.xk-l{font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#6B7C74}
+.xk-v{font-size:19px;font-weight:800;color:#1A2B22;line-height:1.2;margin-top:4px;letter-spacing:-.01em}
+.xk-v.g{color:var(--o-green);font-size:16px}
+.xk-s{font-size:10.5px;color:#6B7C74;margin-top:4px;line-height:1.35}
+
+.xr-cols{display:grid;grid-template-columns:1.25fr .85fr .95fr;gap:12px;margin-top:14px;align-items:start}
+.xr-card{border:1px solid #E2EAE4;border-radius:10px;padding:13px 15px;background:#fff}
+.xr-card h2{font-size:14px;font-weight:800;color:#1A2B22;margin:0 0 9px;display:flex;align-items:center;gap:8px}
+.xr-card h2 i{width:4px;height:17px;border-radius:2px;background:var(--o-green);flex:none}
+.xr-card h2 i.o{background:var(--o-orange)} .xr-card h2 i.b{background:var(--o-blue)}
+.xr-bul{list-style:none;margin:0;padding:0}
+.xr-bul li{position:relative;padding-left:15px;margin-bottom:9px;font-size:11.5px;line-height:1.45;color:#33433C}
+.xr-bul li::before{content:"";position:absolute;left:1px;top:6px;width:5px;height:5px;border-radius:50%;background:#1A2B22}
+.xr-bul b{color:#1A2B22;font-weight:800}
+.xr-empty{font-size:11.5px;color:#8A9E92;margin:0}
+.xr-tag{display:inline-block;padding:3px 11px;border-radius:999px;color:#fff;font-size:9px;
+  font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.xr-tag.road{background:var(--o-orange)} .xr-tag.mit{background:var(--o-green)}
+.xr-card h3{font-size:12.5px;font-weight:800;margin:8px 0 5px;color:#1A2B22;line-height:1.3}
+.xr-card p{font-size:11px;line-height:1.45;color:#46564E;margin:0}
+.xr-card hr{border:0;border-top:1px solid #EDF2EE;margin:13px 0}
+.xr-ms-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  font-size:11px;font-weight:800;color:#1A2B22;padding:5px 0 4px;border-bottom:1px solid #E2EAE4}
+.xr-ms-head span{font-weight:700;color:#6B7C74;font-size:10px}
+.xr-ms{display:grid;grid-template-columns:minmax(0,1fr) auto 10px;gap:8px;align-items:center;
+  padding:6px 0;border-bottom:1px solid #F1F5F2}
+.xr-ms:last-child{border-bottom:0}
+.xm-t{font-size:11px;font-weight:700;color:#1A2B22;min-width:0;line-height:1.25}
+.xm-s{display:block;font-weight:500;color:#8A9E92;font-size:9.5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xm-d{font-size:10px;font-weight:700;color:#6B7C74;white-space:nowrap}
+.xm-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.xr-foot{display:flex;justify-content:space-between;gap:12px;margin-top:14px;padding-top:9px;
+  border-top:1px solid #E2EAE4;font-size:9.5px;color:#8A9E92}
+
+@media print{
+  .doc.xrdoc{max-width:none}
+  .xr{padding:9mm 10mm 7mm}
+  .xr-top h1{font-size:20pt}
+  .xr-mission{font-size:11pt;padding:9px 13px}
+  .xk-v{font-size:14pt} .xk-v.g{font-size:12pt}
+  .xr-cols{gap:9px} .xr-card{padding:10px 12px}
+  .xr-bul li{font-size:8.5pt;margin-bottom:6px}
+  .xr-card p{font-size:8pt} .xr-card h3{font-size:9.5pt}
+  .xm-t{font-size:8pt} .xm-s{font-size:7pt} .xm-d{font-size:7.5pt}
+  .xr,.xr-cols,.xr-card{break-inside:avoid}
+}
+
 /* ══ pilot status report ══════════════════════════════════════════ */
 .ps-tbl{table-layout:fixed}
 .ps-tbl td{vertical-align:top;padding:8px 10px}
@@ -3236,6 +3299,7 @@ function applyOrientation() {
   // No page margin at all: the banner and the closing band run to the paper
   // edge and the document sets its own gutters — a designed sheet, not a
   // word-processor printout.
+  if (RPT && RPT.layout === 'exec') { st.textContent = '@page{size:A4 landscape;margin:0}'; return; }
   if (one) {
     // the sheet is already 210mm wide on screen, so its rendered height is
     // the height of the page: size the page box to it and nothing can break
@@ -3429,6 +3493,88 @@ function reportPilotStatus(f) {
   ${docFooter(f)}`;
 }
 
+/* ══ EXECUTIVE REPORT ══════════════════════════════════════════════
+   A single landscape sheet for a steering audience. Four facts, what
+   moved, the one thing in the way, and the road ahead.
+   Computed where the data already exists; typed where it does not.  */
+const EXEC_STATE = { G: ['ON TRACK', '#1F8A3F'], A: ['AT RISK', '#EE7D00'], R: ['OFF TRACK', '#C0392B'] };
+
+/** "**Lead in.** the rest" → a bolded opening and its body */
+function execBullet(line) {
+  const m = /^\s*\*\*(.+?)\*\*\s*(.*)$/.exec(line);
+  return m ? `<b>${esc(m[1])}</b> ${esc(m[2])}` : esc(line);
+}
+
+function reportExecutive(f) {
+  const m = D.meta;
+  const [stateLabel, stateColor] = EXEC_STATE[m.overallRag] || ['NOT SET', '#8A9E92'];
+  const lines = v => String(v || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const ms = D.milestones.slice().sort((a, b) => a.week - b.week);
+  const next = ms.find(x => x.status !== 'done');
+  const dot = x => x.status === 'done' ? '#7CB342' : x.status === 'missed' ? '#C0392B'
+    : x.week <= f.wk ? '#EE7D00' : '#2D8CD0';
+
+  const horizon = (m.programStart && m.programEnd)
+    ? `${esc(m.programStart)} – ${esc(m.programEnd)}` : `${fmtD(weekStart(1))} – ${fmtD(weekEnd(m.weeks))}`;
+
+  return `<div class="xr">
+    <div class="xr-top">
+      <h1>${esc(m.programName || m.projectName)}</h1>
+      <div class="xr-state">
+        <span class="xr-pill" style="background:${stateColor}">${stateLabel}</span>
+        <span class="xr-sub">Wave ${m.waveNo || 1} ${activePilots().length ? 'Active' : 'Not started'}</span>
+      </div>
+    </div>
+
+    <div class="xr-mission">${esc(m.mission ||
+      'Establish one product-centric lifecycle to connect demand, prioritization, delivery, deployment and measurable business value.')}</div>
+
+    <div class="xr-kpis">
+      <div class="xr-kpi"><div class="xk-l">Program horizon</div><div class="xk-v">${horizon}</div>
+        <div class="xk-s">${esc(m.programNote || `Wave ${m.waveNo || 1} runs ${fmtD(weekStart(1))} to ${fmtD(weekEnd(m.weeks))}`)}</div></div>
+      <div class="xr-kpi"><div class="xk-l">Effort progress</div><div class="xk-v">${f.progress.pct}%</div>
+        <div class="xk-s">${f.progress.done} of ${f.progress.total} activities · ${activePilots().length} active pilots</div></div>
+      <div class="xr-kpi"><div class="xk-l">Budget</div><div class="xk-v">${esc(m.budget || '—')}</div>
+        <div class="xk-s">${esc(m.budgetNote || 'Set the budget in Data & setup')}</div></div>
+      <div class="xr-kpi"><div class="xk-l">Next milestone</div>
+        <div class="xk-v g">${next ? esc(next.name) : 'All milestones met'}</div>
+        <div class="xk-s">${next ? `Due ${esc(fmtDL(weekEnd(next.week)))}` : `Wave closed ${esc(fmtD(weekEnd(m.weeks)))}`}</div></div>
+    </div>
+
+    <div class="xr-cols">
+      <section class="xr-card"><h2><i></i>Highlights this period</h2>
+        ${lines(RPT.highlights).length
+          ? `<ul class="xr-bul">${lines(RPT.highlights).map(l => `<li>${execBullet(l)}</li>`).join('')}</ul>`
+          : `<p class="xr-empty">Write the highlights in the Executive narrative below —
+             start a line with <b>**bold lead-in**</b> and the rest follows.</p>`}
+      </section>
+
+      <section class="xr-card"><h2><i class="o"></i>Focus &amp; risk</h2>
+        <span class="xr-tag road">Decision / roadblock</span>
+        <h3>${esc(RPT.focusTitle) || (f.risksHigh[0] ? esc(f.risksHigh[0].name) : 'Nothing blocking')}</h3>
+        <p>${esc(RPT.focusBody) || (f.risksHigh[0] ? esc(f.risksHigh[0].desc) : 'No high-severity risk is open.')}</p>
+        <hr>
+        <span class="xr-tag mit">Mitigation</span>
+        <h3>${esc(RPT.mitigationTitle) || 'Agreed mitigation'}</h3>
+        <p>${esc(RPT.mitigationBody) || (f.risksHigh[0] ? esc(f.risksHigh[0].mitigation) : '—')}</p>
+      </section>
+
+      <section class="xr-card"><h2><i class="b"></i>Milestones</h2>
+        <div class="xr-ms-head">Wave ${m.waveNo || 1} · ${esc(m.waveLabel || 'Validate')}
+          <span>${esc(fmtD(weekStart(1)))} – ${esc(fmtD(weekEnd(m.weeks)))}</span></div>
+        ${ms.map(x => `<div class="xr-ms">
+          <div class="xm-t">${esc(x.name)}<span class="xm-s">${esc(x.owner)}</span></div>
+          <div class="xm-d">${esc(fmtD(weekEnd(x.week)))}</div>
+          <span class="xm-dot" style="background:${dot(x)}"></span>
+        </div>`).join('')}
+      </section>
+    </div>
+
+    <div class="xr-foot"><span>Internal use</span>
+      <span>${esc(m.supplier)} · ${esc(m.client)} · week ${f.wk} of ${m.weeks} · ${esc(RPT.author || '—')}</span></div>
+  </div>`;
+}
+
 function renderReport() {
   const el = $('#panel-report');
   RPT = reportFor(RPTDATE);
@@ -3444,7 +3590,7 @@ function renderReport() {
       <div style="min-width:135px"><span class="lbl">Report date — the day in the title</span>
         <input type="date" id="rptDay" value="${esc(RPT.day || RPT.to)}"></div>
       <div style="min-width:160px"><span class="lbl">Format</span>
-        <div class="seg">${[['one', 'One-pager'], ['pilots', 'Pilot status'], ['full', 'Full report']].map(([k, l]) =>
+        <div class="seg">${[['exec', 'Executive'], ['one', 'One-pager'], ['pilots', 'Pilot status'], ['full', 'Full report']].map(([k, l]) =>
           `<button type="button" data-rlayout="${k}" aria-pressed="${(RPT.layout || 'one') === k}">${l}</button>`).join('')}</div></div>
       ${(RPT.layout || 'one') === 'one' ? `<div style="min-width:142px"><span class="lbl">Page orientation</span>
         <div class="src" style="padding-top:6px">Portrait — the one-pager is built for a single tall sheet</div></div>`
@@ -3463,8 +3609,10 @@ function renderReport() {
         <div class="src" style="flex-basis:100%;text-align:right;margin-top:4px">
           ${(RPT.layout || 'one') === 'one'
             ? 'The one-pager prints as a single continuous page, however long it runs — no page breaks.'
-            : RPT.layout === 'pilots'
-              ? 'One row per pilot. Landscape suits the Next step column; a row is never split across pages.'
+            : RPT.layout === 'exec'
+              ? 'A single landscape sheet for a steering audience — always one page.'
+              : RPT.layout === 'pilots'
+                ? 'One row per pilot. Landscape suits the Next step column; a row is never split across pages.'
               : 'The full report paginates onto A4.'}
           In the print dialog turn <strong>Headers and footers</strong> off and
           <strong>Background graphics</strong> on for a clean full-bleed PDF.</div>
@@ -3485,6 +3633,15 @@ function renderReport() {
             placeholder="Sessions, gates and milestones ahead.">${esc(RPT.nextWeek)}</textarea></div>
         <div><span class="lbl">Decisions taken</span>
           <textarea data-rpt="decisions" placeholder="Decision · who took it · date.">${esc(RPT.decisions)}</textarea></div>
+        ${(RPT.layout === 'exec') ? `<div style="grid-column:1/-1"><span class="lbl">Executive · highlights this period — one per line, start with **a bold lead-in**</span>
+          <textarea data-rpt="highlights" style="min-height:92px"
+            placeholder="**Foundation established.** Baseline, lifecycle, governance and playbook complete.">${esc(RPT.highlights || '')}</textarea></div>
+        <div><span class="lbl">Executive · decision or roadblock</span>
+          <input type="text" data-rpt="focusTitle" value="${esc(RPT.focusTitle || '')}" placeholder="Protected participation & decision rights">
+          <textarea data-rpt="focusBody" style="margin-top:6px" placeholder="What is in the way, and what it delays.">${esc(RPT.focusBody || '')}</textarea></div>
+        <div><span class="lbl">Executive · mitigation</span>
+          <input type="text" data-rpt="mitigationTitle" value="${esc(RPT.mitigationTitle || '')}" placeholder="Visible VP sponsorship + weekly evidence">
+          <textarea data-rpt="mitigationBody" style="margin-top:6px" placeholder="What we are doing about it.">${esc(RPT.mitigationBody || '')}</textarea></div>` : ''}
         <div><span class="lbl">Asks of the client — what we need, from whom, by when</span>
           <textarea data-rpt="asks" placeholder="Be specific: a name and a date, not 'support'.">${esc(RPT.asks)}</textarea></div>
       </div></div></div>
@@ -3503,8 +3660,10 @@ function renderReport() {
   </div>
 
   <div class="doc${(RPT.layout || 'one') !== 'one' && RPT.orient === 'landscape' ? ' landscape' : ''}${
-    (RPT.layout || 'one') === 'one' ? ' one sheet' : ''}" id="reportDoc">
+    (RPT.layout || 'one') === 'one' ? ' one sheet' : ''}${
+    RPT.layout === 'exec' ? ' xrdoc' : ''}" id="reportDoc">
     ${(RPT.layout || 'one') === 'one' ? reportOnePager(f)
+      : (RPT.layout === 'exec') ? reportExecutive(f)
       : (RPT.layout === 'pilots') ? reportPilotStatus(f) : `
     ${docBanner(f)}
     <div class="doc-body">
@@ -3647,6 +3806,27 @@ function renderData() {
           <div><span class="lbl">Change lead</span><input type="text" data-meta="changeLead" value="${esc(D.meta.changeLead)}"></div>
           ${Store.mode === 'api' ? '' : `<div style="grid-column:1/-1"><span class="lbl">Your name — stamped on updates you log</span>
             <input type="text" data-meta="whoAmI" value="${esc(D.meta.whoAmI || '')}" placeholder="So the activity log says who did what"></div>`}
+          <div><span class="lbl">Programme name — the executive report title</span>
+            <input type="text" data-meta="programName" value="${esc(D.meta.programName || '')}"
+              placeholder="Digital Products — New Ways of Working"></div>
+          <div><span class="lbl">Wave number and label</span>
+            <div class="row" style="gap:6px">
+              <input type="number" min="1" max="9" style="width:70px" data-meta="waveNo" value="${D.meta.waveNo || 1}">
+              <input type="text" data-meta="waveLabel" value="${esc(D.meta.waveLabel || 'Validate')}" placeholder="Validate"></div></div>
+          <div><span class="lbl">Programme horizon — shown on the executive report</span>
+            <div class="row" style="gap:6px">
+              <input type="text" data-meta="programStart" value="${esc(D.meta.programStart || '')}" placeholder="Apr 2026">
+              <input type="text" data-meta="programEnd" value="${esc(D.meta.programEnd || '')}" placeholder="Dec 2027"></div></div>
+          <div><span class="lbl">Horizon note</span>
+            <input type="text" data-meta="programNote" value="${esc(D.meta.programNote || '')}"
+              placeholder="Discovery/Design Apr 26 | Enterprise rollout Dec 27"></div>
+          <div><span class="lbl">Budget</span>
+            <input type="text" data-meta="budget" value="${esc(D.meta.budget || '')}" placeholder="$228.8K"></div>
+          <div><span class="lbl">Budget note</span>
+            <input type="text" data-meta="budgetNote" value="${esc(D.meta.budgetNote || '')}" placeholder="Fixed price · 16 weeks"></div>
+          <div style="grid-column:1/-1"><span class="lbl">Mission statement — the green band</span>
+            <input type="text" data-meta="mission" value="${esc(D.meta.mission || '')}"
+              placeholder="Establish one product-centric lifecycle to connect demand, prioritization, delivery, deployment and measurable business value."></div>
           <div style="grid-column:1/-1"><span class="lbl">Gate Calculator link</span>
             <input type="text" data-meta="gateToolUrl" value="${esc(D.meta.gateToolUrl)}"
               placeholder="Paste the Gate Calculator URL to link the two tools"></div>
