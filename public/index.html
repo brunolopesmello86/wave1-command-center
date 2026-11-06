@@ -567,6 +567,11 @@ body{background:var(--bg)}
 .railrow .rbar{flex:1;height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden;min-width:30px}
 .railrow .rbar i{display:block;height:100%;border-radius:2px;background:var(--green)}
 .railseg{background:var(--surface);border-color:var(--line-soft)}
+.gonecard>.body{background:color-mix(in srgb,var(--ink) 4%,var(--surface))}
+.railrow.gone{opacity:.74}
+.railrow.gone .rname{text-decoration:line-through;text-decoration-color:var(--faint)}
+.railrow.gone .rbar i{background:var(--faint)}
+.railrow.gone .roff{background:color-mix(in srgb,var(--amber) 26%,var(--surface));color:var(--ink-2)}
 .railrow .roff{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
   padding:1px 6px;border-radius:4px;background:var(--surface-3);color:var(--faint);flex:none}
 
@@ -1663,10 +1668,10 @@ const ovMap = () => {
   for (const o of D.work) m[o.id] = o;
   return m;
 };
-/** every board card: 43 activities × each pilot, merged with its override */
-function allWork() {
+/** the lifecycle cards for a given set of pilots, merged with their overrides */
+function workFor(pilots) {
   const ov = ovMap(), out = [];
-  for (const p of D.pilots) {
+  for (const p of pilots) {
     for (const a of D.activityTemplate) {
       const id = p.id + '-' + a.id;
       const o = ov[id] || {};
@@ -1686,6 +1691,13 @@ function allWork() {
     }
   }
   return out;
+}
+/** every board card: the lifecycle activities × the pilots still in the wave */
+function allWork() { return workFor(livePilots()); }
+/** one pilot's cards, cancelled or not — its own page still has to show them */
+function pilotWork(pid) {
+  const p = D.pilots.find(x => x.id === pid);
+  return p ? workFor([p]) : [];
 }
 /* ── standalone backlog items ───────────────────────────────────
    Not every card is a lifecycle activity run once per pilot. A Jira
@@ -1737,11 +1749,11 @@ function setWork(id, patch) {
 
 /* ── computed roll-ups ──────────────────────────────────────────── */
 function pilotProgress(pid) {
-  const items = allWork().filter(w => w.pilot === pid);
+  const items = pilotWork(pid);
   const done = items.filter(w => w.status === 'done').length;
   const active = items.filter(w => w.status === 'progress' || w.status === 'review').length;
   const blocked = items.filter(w => w.blocked).length;
-  return { total: items.length, done, active, blocked, pct: Math.round(done / items.length * 100) };
+  return { total: items.length, done, active, blocked, pct: items.length ? Math.round(done / items.length * 100) : 0 };
 }
 function overallProgress() {
   const live = new Set(activePilots().map(p => p.id));
@@ -1749,16 +1761,40 @@ function overallProgress() {
   const done = items.filter(w => w.status === 'done').length;
   return { total: items.length, done, pct: items.length ? Math.round(done / items.length * 100) : 0 };
 }
-/** A pilot counts towards the wave unless someone has switched it off.
-    Undefined means active, so existing pilots are untouched. */
-const isActive = p => p && p.active !== false;
-function activePilots() { return D.pilots.filter(isActive); }
+/* A pilot is in one of three states.
+
+   Active        — counting towards the wave.
+   Stood down    — still in the line-up, still on the board, left out of
+                   the completion figures. The switch on its page.
+   Cancelled     — out of the line-up altogether. Its cards leave the
+                   board, it leaves every count, every report and the
+                   rail, and it moves to its own section. Nothing is
+                   deleted: its board, log and roster are held exactly as
+                   they were, and restoring it puts all of it back.
+
+   Cancelling is reversible, so anyone may do it. Deleting is not, so
+   that stays with an admin. */
+const isActive = p => p && p.active !== false && !isCancelled(p);
+const isCancelled = p => !!(p && p.cancelled);
+/** the line-up: every pilot the wave is still running */
+function livePilots() { return D.pilots.filter(p => !isCancelled(p)); }
+function cancelledPilots() {
+  return D.pilots.filter(isCancelled).sort((a, b) =>
+    String(b.cancelled).localeCompare(String(a.cancelled)) || a.id.localeCompare(b.id));
+}
+function activePilots() { return livePilots().filter(isActive); }
+/** options for a pilot picker: the line-up, keeping a cancelled selection visible */
+function pilotPicks(sel) {
+  const list = livePilots();
+  const cur = sel && !list.some(p => p.id === sel) && D.pilots.find(p => p.id === sel);
+  return (cur ? list.concat([cur]) : list).map(p => [p.id, p.short + (isCancelled(p) ? ' — cancelled' : '')]);
+}
 
 /** How far a pilot is from where the plan expects it to be this week:
     activities whose planned end week has passed, against those actually done. */
 function pilotPace(pid) {
   const wk = currentWeek();
-  const items = allWork().filter(w => w.pilot === pid);
+  const items = pilotWork(pid);
   if (!items.length) return { pct: 0, target: 0, gap: 0, state: 'on' };
   const target = Math.round(items.filter(w => w.endWk <= wk).length / items.length * 100);
   const pct = Math.round(items.filter(w => w.status === 'done').length / items.length * 100);
@@ -1847,8 +1883,8 @@ function renderExec() {
   const highRisks = openRisks.filter(r => r.sev === 'H');
   const blocked = boardCards().filter(w => w.blocked);
   const delivOn = D.deliverables.filter(d => d.rag === 'G').length;
-  const pilotsRed = D.pilots.filter(p => p.rag === 'R');
-  const pilotsAmber = D.pilots.filter(p => p.rag === 'A');
+  const pilotsRed = livePilots().filter(p => p.rag === 'R');
+  const pilotsAmber = livePilots().filter(p => p.rag === 'A');
   const recent = D.updates.slice().sort((a, b) => b.ts - a.ts).slice(0, 12);
 
   // an honest suggestion, not an imposed verdict — the lead sets the RAG
@@ -1871,7 +1907,7 @@ function renderExec() {
         <div class="tv">${P.pct}<small>%</small></div>
         <div class="ts">${P.done} of ${P.total} across ${activePilots().length} active pilot${
           activePilots().length === 1 ? '' : 's'}${
-          D.pilots.length - activePilots().length ? ` · ${D.pilots.length - activePilots().length} stood down` : ''}</div></div>
+          livePilots().length - activePilots().length ? ` · ${livePilots().length - activePilots().length} stood down` : ''}</div></div>
       <div class="tile acc"><div class="tl">Milestones met</div>
         <div class="tv">${msDone}<small>/ ${ms.length}</small></div>
         <div class="ts">${nextMs ? `Next: ${nextMs.id} · ${weekLabel(nextMs.week)}` : 'All milestones met'}</div></div>
@@ -1891,7 +1927,7 @@ function renderExec() {
           <div class="tscroll"><table>
             <thead><tr><th>Pilot</th><th>Area</th><th>Phase</th><th style="width:150px">Progress</th>
               <th class="r">Done</th><th class="r">Blocked</th><th>RAG</th><th>Next step</th></tr></thead>
-            <tbody>${D.pilots.map(p => {
+            <tbody>${livePilots().map(p => {
               const pr = pilotProgress(p.id);
               const pace = pilotPace(p.id);
               return `<tr data-openpilot="${p.id}" class="${isActive(p) ? '' : 'offrow'}" style="cursor:pointer">
@@ -2018,7 +2054,7 @@ function renderBacklog() {
           <span class="lbl">Search</span>
           <input type="text" id="fq" value="${esc(F.q)}" placeholder="Activity, ID, role…"></div>
         <div style="min-width:150px"><span class="lbl">Pilot</span>
-          <select id="fpilot">${opts([['', 'All pilots']].concat(D.pilots.map(p => [p.id, p.id + ' · ' + p.short])), F.pilot)}</select></div>
+          <select id="fpilot">${opts([['', 'All pilots']].concat(livePilots().map(p => [p.id, p.id + ' · ' + p.short])), F.pilot)}</select></div>
         <div style="min-width:165px"><span class="lbl">Label</span>
           <select id="flabel">${opts([['', 'Any label']].concat(itemLabels().map(l => [l, l])), F.label)}</select></div>
         <div style="min-width:165px"><span class="lbl">Phase</span>
@@ -2145,10 +2181,10 @@ function openCard(id) {
     <div class="card"><header><h3>Remove this activity</h3></header><div class="body tight">
       <p class="src" style="margin:0 0 9px">This card is lifecycle activity <strong>${esc(w.act)}</strong> on
         <strong>${esc(p ? p.short : w.pilot)}</strong>. The same activity exists on
-        ${D.pilots.length - 1} other pilot${D.pilots.length === 2 ? '' : 's'}.</p>
+        ${livePilots().length - 1} other pilot${livePilots().length === 2 ? '' : 's'}.</p>
       <div class="row">
         <button class="btn danger sm" data-delcard="${id}">Remove from ${esc(p ? p.short : w.pilot)} only</button>
-        <button class="btn danger sm" data-delact="${esc(w.act)}">Remove from the plan — all ${D.pilots.length} pilots</button>
+        <button class="btn danger sm" data-delact="${esc(w.act)}">Remove from the plan — all ${livePilots().length} pilots</button>
       </div>
     </div></div>
 
@@ -2235,7 +2271,7 @@ function ganttHTML(mode, live = true) {
 
   let rows = '';
   if (mode === 'pilot') {
-    rows = D.pilots.map(p => {
+    rows = livePilots().map(p => {
       const pr = pilotProgress(p.id);
       const cls = p.rag === 'R' ? 'r' : p.rag === 'A' ? 'a' : p.rag === 'G' ? '' : 'n';
       return `<tr${isActive(p) ? '' : ' style="opacity:.5"'}><td class="nm"${live ? ` data-openpilot="${p.id}" style="cursor:pointer"` : ''}>
@@ -2411,7 +2447,7 @@ function openEvent(id) {
       <div><span class="lbl">Type</span>
         <select data-ev="${id}" data-evf="cat">${opts(Object.entries(CATS).map(([k, v]) => [k, v[0]]), e.cat)}</select></div>
       <div><span class="lbl">Related pilot</span>
-        <select data-ev="${id}" data-evf="pilot">${opts([['', '—']].concat(D.pilots.map(p => [p.id, p.short])), e.pilot)}</select></div>
+        <select data-ev="${id}" data-evf="pilot">${opts([['', '—']].concat(pilotPicks(e.pilot)), e.pilot)}</select></div>
       <div><span class="lbl">Outcome</span>
         <select data-ev="${id}" data-evf="outcome">${opts(EV_OUTCOMES, evOutcome(e))}</select></div>
     </div>
@@ -2435,14 +2471,14 @@ function eventPilot(e) {
   if (e.pilot && D.pilots.some(p => p.id === e.pilot)) return e.pilot;
   const t = String(e.title || '');
   for (const key of ['id', 'short']) {
-    const hit = D.pilots.filter(p => p[key] && t.includes(p[key]));
+    const hit = livePilots().filter(p => p[key] && t.includes(p[key]));
     if (hit.length === 1) return hit[0].id;
   }
   return '';
 }
 
 function meetingStats() {
-  const rows = D.pilots.map(p => ({ p, scheduled: 0, held: 0, noshow: 0, total: 0 }));
+  const rows = livePilots().map(p => ({ p, scheduled: 0, held: 0, noshow: 0, total: 0 }));
   const by = Object.fromEntries(rows.map(r => [r.p.id, r]));
   let wave = 0;
   for (const e of D.events) {
@@ -2497,7 +2533,7 @@ function meetingTracker() {
         <div class="tile acc a"><div class="tl">No show</div><div class="tv">${tot.noshow}</div>
           <div class="ts">${tot.held + tot.noshow ? Math.round(tot.noshow / (tot.held + tot.noshow) * 100) : 0}% of sessions that came due</div></div>
         <div class="tile"><div class="tl">Total</div><div class="tv">${tot.total}</div>
-          <div class="ts">across ${D.pilots.length} pilots</div></div>
+          <div class="ts">across ${livePilots().length} pilots</div></div>
       </div>
 
       <div class="mt">
@@ -2636,33 +2672,90 @@ function deletePilot(id) {
   Store.remove('pilots', id);
   logUpdate(`Pilot ${id} ${p.short} removed from the wave`,
     `${goes.join('; ')}${kept.length ? `. Kept: ${kept.join('; ')}` : ''}`, 'r', id);
-  if (selPilot === id) selPilot = D.pilots[0] ? D.pilots[0].id : null;
+  if (selPilot === id) selPilot = (livePilots()[0] || D.pilots[0] || {}).id || null;
   if (F.pilot === id) F.pilot = '';
   closeDrawer(); paint();
   flash(`${id} ${p.short} removed.`);
 }
 
+/* Cancelling is the reversible half of removing: the pilot leaves the
+   line-up and every figure that counts it, but nothing it holds is
+   touched. Anyone may do it, because anyone can put it back. */
+function cancelPilot(id) {
+  const p = D.pilots.find(x => x.id === id);
+  if (!p || isCancelled(p)) return;
+  const pr = pilotProgress(id);
+  if (!confirm(`Cancel ${id} ${p.short}?\n\n` +
+    `It leaves the line-up: its ${pr.total} cards come off the board, and it drops out of the wave ` +
+    `completion figure, the timeline, the calendar pickers and every report.\n\n` +
+    `Nothing is deleted. Its board at ${pr.done} of ${pr.total} complete, its checklist, participants ` +
+    `and meeting log are all held as they are, and restoring it puts every one of them back.`)) return;
+  p.cancelled = todayISO();
+  Store.save('pilots', p);
+  logUpdate(`Pilot ${id} ${p.short} cancelled`,
+    `Out of the line-up at ${pr.pct}% complete. Its board and log are kept and can be restored.`, 'r', id);
+  selPilot = id; closeDrawer(); paint();
+  flash(`${id} ${p.short} moved to Cancelled. Nothing was deleted.`);
+}
+function restorePilot(id) {
+  const p = D.pilots.find(x => x.id === id);
+  if (!p || !isCancelled(p)) return;
+  delete p.cancelled;
+  Store.save('pilots', p);
+  const pr = pilotProgress(id);
+  logUpdate(`Pilot ${id} ${p.short} restored to the line-up`,
+    `${pr.total} cards are back on the board, at ${pr.pct}% complete.`, 'g', id);
+  selPilot = id; paint();
+  flash(`${id} ${p.short} is back in the line-up.`);
+}
+
+/** the rail's second card: what the wave has stopped running */
+function cancelledCard() {
+  const gone = cancelledPilots();
+  if (!gone.length) return '';
+  return `<div class="card railcard gonecard"><header><h3>Cancelled</h3>
+      <span class="hint">${gone.length} out of the line-up</span></header>
+    <div class="body tight" style="display:grid;gap:8px">
+      ${gone.map(x => {
+        const xp = pilotProgress(x.id);
+        return `<button class="railrow gone ${x.id === selPilot ? 'sel' : ''}" data-selpilot="${x.id}">
+          <span class="rag ${x.rag}"></span>
+          <span class="rname">${esc(x.short)}</span>
+          <span class="rpct">${xp.pct}%</span>
+          <span class="rfoot">
+            <span class="rmeta">${x.id} · ${x.cancelled ? fmtD(x.cancelled) : 'no date'}</span>
+            <span class="rbar"><i style="width:${xp.pct}%"></i></span>
+            <span class="roff">OUT</span>
+          </span>
+        </button>`;
+      }).join('')}
+      <p class="src" style="margin:2px 2px 0">Boards, checklists and logs are held exactly as they were.
+        Open one to see where it got to, or to put it back.</p>
+    </div></div>`;
+}
+
 function renderPilots() {
   const el = $('#panel-pilots');
-  if (!selPilot) selPilot = D.pilots[0] && D.pilots[0].id;
+  if (!selPilot) selPilot = (livePilots()[0] || D.pilots[0] || {}).id || null;
   const p = D.pilots.find(x => x.id === selPilot);
   if (!p) {
     el.innerHTML = `<div class="card"><div class="empty"><strong>No pilots in the wave</strong>
       A pilot arrives with the full set of ${D.activityTemplate.length} lifecycle activities on its board.
       <div style="margin-top:11px"><button class="btn primary" id="addPilot">＋ Add the first pilot</button></div>
-    </div></div>`;
+    </div></div>
+    <div style="max-width:420px;margin-top:14px">${cancelledCard()}</div>`;
     return;
   }
   const pr = pilotProgress(p.id);
   const log = pilotLog(p.id);
-  const items = allWork().filter(w => w.pilot === p.id);
+  const items = pilotWork(p.id);
   const blocked = items.filter(w => w.blocked);
   const pilotRisks = D.risks.filter(r => r.pilot === p.id && riskLive(r));
   const pilotEvents = D.events.filter(e => e.pilot === p.id || e.title.includes(p.short))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const shown = D.pilots.filter(x => railFilter === 'all' || (railFilter === 'active') === isActive(x));
-  const nOn = activePilots().length, nOff = D.pilots.length - nOn;
+  const shown = livePilots().filter(x => railFilter === 'all' || (railFilter === 'active') === isActive(x));
+  const nOn = activePilots().length, nOff = livePilots().length - nOn;
   const rail = shown.map(x => {
     const xp = pilotProgress(x.id);
     return `<button class="railrow ${x.id === selPilot ? 'sel' : ''} ${isActive(x) ? '' : 'off'}" data-selpilot="${x.id}">
@@ -2694,6 +2787,7 @@ function renderPilots() {
             `<button type="button" data-rail="${k}" aria-pressed="${railFilter === k}" style="flex:1">${l}</button>`).join('')}</div>
           ${rail}
         </div></div>
+      ${cancelledCard()}
     </div>
 
     <div class="stack">
@@ -2706,16 +2800,26 @@ function renderPilots() {
               ${esc(p.projectName)}${p.swf ? `<span class="src" style="font-weight:400"> · delivered with ${esc(p.swf)}</span>` : ''}</div>` : ''}
           </div>
           <div class="row">
-            <button class="swtoggle" data-pactive="${p.id}" role="switch" aria-checked="${isActive(p)}"
+            ${isCancelled(p) ? `<span class="badge b-r">Cancelled${p.cancelled ? ' · ' + fmtD(p.cancelled) : ''}</span>`
+              : `<button class="swtoggle" data-pactive="${p.id}" role="switch" aria-checked="${isActive(p)}"
               title="${isActive(p) ? 'Counting towards the wave — switch off to stand it down'
                 : 'Not counting towards the wave — switch on to activate it'}">
-              <span class="track"></span><span class="swlabel">${isActive(p) ? 'Activated' : 'Not activated'}</span></button>
+              <span class="track"></span><span class="swlabel">${isActive(p) ? 'Activated' : 'Not activated'}</span></button>`}
             <span class="lbl" style="margin:0;align-self:center">RAG</span>
             ${ragSeg('prag', p.id, p.rag, true)}
           </div>
         </header>
         <div class="body">
-          ${isActive(p) ? '' : `<div class="note" style="margin-bottom:12px"><strong>Not activated.</strong>
+          ${isCancelled(p) ? `<div class="note" style="margin-bottom:12px">
+            <strong>Cancelled${p.cancelled ? ' on ' + fmtD(p.cancelled) : ''}.</strong>
+            ${esc(p.short)} is out of the line-up: its ${pilotProgress(p.id).total} cards are off the board and it
+            counts towards nothing on the executive summary, the timeline or the reports. Everything below is held
+            as it was on the day it was cancelled, and is still editable.
+            <button class="btn sm" data-restorepilot="${p.id}" style="margin-left:6px">Restore it to the line-up</button>
+            <div style="margin-top:10px"><span class="lbl">Why it was cancelled</span>
+              <textarea data-p="${p.id}" data-pf="cancelReason" rows="2"
+                placeholder="The decision, who took it, and anything the wave should carry forward.">${esc(p.cancelReason || '')}</textarea></div>
+          </div>` : isActive(p) ? '' : `<div class="note" style="margin-bottom:12px"><strong>Not activated.</strong>
             Activities, meetings and risks stay here and stay editable, but this pilot is left out of the wave
             completion figure on the executive summary and the Friday report.
             <button class="btn sm" data-pactive="${p.id}" style="margin-left:6px">Activate it</button></div>`}
@@ -2925,17 +3029,30 @@ function pilotTeamPane(p) {
       <textarea data-p="${p.id}" data-pf="blockers" placeholder="What needs a decision from outside the pilot team.">${esc(p.blockers)}</textarea></div>
     </div></div>
 
+    ${isCancelled(p) ? `<div class="card"><header><h3>Back into the line-up</h3></header><div class="body tight">
+        <p class="src" style="margin:0 0 9px">${esc(p.short)} was cancelled${p.cancelled ? ' on ' + fmtD(p.cancelled) : ''}.
+          Restoring it puts its ${pilotProgress(p.id).total} cards back on the board at the status they were left
+          in, and it counts towards the wave again.</p>
+        <button class="btn sm primary" data-restorepilot="${p.id}">Restore ${p.id} ${esc(p.short)}</button>
+      </div></div>` : `<div class="card"><header><h3>Cancel this pilot</h3></header><div class="body tight">
+        <p class="src" style="margin:0 0 9px">Takes ${esc(p.short)} out of the line-up and moves it to the
+          Cancelled section: its ${pilotProgress(p.id).total} cards come off the board and it counts towards
+          nothing. Nothing is deleted and it can be restored at any time. To leave it in the line-up but out of
+          the completion figure, switch it off at the top of this page instead.</p>
+        <button class="btn sm" data-cancelpilot="${p.id}">Cancel ${p.id} ${esc(p.short)}</button>
+      </div></div>`}
+
     ${isAdmin() ? `<div class="card"><header><h3>Remove this pilot</h3>
         <span class="badge b-v">admin only</span></header><div class="body tight">
         <p class="src" style="margin:0 0 9px">Deletes ${p.id}'s ${D.activityTemplate.length} board cards, its
           checklist, participants, training invitees and meeting log. Risks and calendar sessions are kept, with
-          the link to ${p.id} cleared. To leave ${esc(p.short)} out of the wave figures without losing any of
-          that, switch it off at the top of this page instead.</p>
+          the link to ${p.id} cleared. Cancelling it, just above, takes it out of the line-up and keeps all of
+          that; switching it off at the top of this page keeps it in the line-up and out of the figures.</p>
         <button class="btn danger sm" data-delpilot="${p.id}">Remove ${p.id} ${esc(p.short)} from the wave</button>
       </div></div>` : `<div class="card"><div class="body tight">
-        <p class="src" style="margin:0">Removing a pilot is restricted to an admin, because it deletes the
-          pilot's board, checklist and meeting log along with it. To leave ${esc(p.short)} out of the wave
-          figures without losing anything, switch it off at the top of this page.</p>
+        <p class="src" style="margin:0">Removing a pilot outright is restricted to an admin, because it deletes
+          the pilot's board, checklist and meeting log along with it. Cancelling it, just above, takes
+          ${esc(p.short)} out of the line-up and keeps every one of those.</p>
       </div></div>`}
     </div>`;
 }
@@ -3413,8 +3530,8 @@ function renderChange() {
 const TR_STATUS = [['to-invite', 'To invite'], ['invited', 'Invited'], ['confirmed', 'Confirmed'], ['trained', 'Trained'], ['declined', 'Declined']];
 function traineeTable() {
   const all = D.trainees || [];
-  const groups = D.pilots.map(p => ({ p, rows: all.filter(t => t.pilot === p.id) }));
-  const orphans = all.filter(t => !D.pilots.some(p => p.id === t.pilot));
+  const groups = livePilots().map(p => ({ p, rows: all.filter(t => t.pilot === p.id) }));
+  const orphans = all.filter(t => !livePilots().some(p => p.id === t.pilot));
   if (orphans.length) groups.push({ p: { id: '', short: 'No pilot' }, rows: orphans });
   const trained = all.filter(t => t.status === 'trained').length;
   return `<div class="card" style="margin-top:12px"><header><h2>Team members to invite, by pilot</h2>
@@ -3569,7 +3686,7 @@ function openRisk(id) {
       <div><span class="lbl">Type</span><select data-r="${id}" data-rf="type">${
         opts(['Delivery', 'Adoption', 'Technical', 'Commercial', 'Resource'], r.type)}</select></div>
       <div><span class="lbl">Related pilot</span><select data-r="${id}" data-rf="pilot">${
-        opts([['', 'Wave-level']].concat(D.pilots.map(p => [p.id, p.short])), r.pilot)}</select></div>
+        opts([['', 'Wave-level']].concat(pilotPicks(r.pilot)), r.pilot)}</select></div>
       <div><span class="lbl">Owner</span><input type="text" data-r="${id}" data-rf="owner" value="${esc(r.owner)}"></div>
       <div><span class="lbl">Review by</span><input type="date" data-r="${id}" data-rf="due" value="${esc(r.due)}"></div>
     </div>
@@ -3770,8 +3887,8 @@ function reportOnePager(f) {
         <div class="tv">${f.milestonesMet.length}<small>/ ${D.milestones.length}</small></div>
         <div class="ts">${f.milestonesLate.length} overdue</div></div>
       <div class="tile"><div class="tl">Pilots active</div>
-        <div class="tv">${activePilots().length}<small>/ ${D.pilots.length}</small></div>
-        <div class="ts">${D.pilots.filter(p => p.rag === 'R').length} red · ${D.pilots.filter(p => p.rag === 'A').length} amber</div></div>
+        <div class="tv">${activePilots().length}<small>/ ${livePilots().length}</small></div>
+        <div class="ts">${livePilots().filter(p => p.rag === 'R').length} red · ${livePilots().filter(p => p.rag === 'A').length} amber</div></div>
       <div class="tile t-amber"><div class="tl">Open risks</div>
         <div class="tv">${f.risksOpen.length}<small>${f.risksHigh.length ? ' · ' + f.risksHigh.length + ' high' : ''}</small></div>
         <div class="ts">${f.risksHigh.length} at high severity</div></div>
@@ -3785,7 +3902,7 @@ function reportOnePager(f) {
     </div>
 
     <div class="doc-sec op-wide"><h3>Pilot status</h3>
-      <div class="op-pilots">${D.pilots.map(p => {
+      <div class="op-pilots">${livePilots().map(p => {
         const pr = pilotProgress(p.id);
         const cls = p.rag === 'R' ? 'r' : p.rag === 'A' ? 'a' : p.rag === 'G' ? 'g' : 'n';
         return `<div class="op-p ${cls}${isActive(p) ? '' : ' off'}">
@@ -3835,7 +3952,7 @@ function reportOnePager(f) {
     sponsor asks about, and nothing else. Reads the same figures as the
     executive view, so the two can never disagree. */
 function reportPilotStatus(f) {
-  const rows = D.pilots.map(p => ({ p, pr: pilotProgress(p.id), pace: pilotPace(p.id) }));
+  const rows = livePilots().map(p => ({ p, pr: pilotProgress(p.id), pace: pilotPace(p.id) }));
   const live = rows.filter(r => isActive(r.p));
   const blocked = rows.reduce((s, r) => s + r.pr.blocked, 0);
   const behind = live.filter(r => r.pace.gap > 5).length;
@@ -4152,8 +4269,8 @@ function renderReport() {
           <div class="tv">${f.milestonesMet.length}<small>/ ${D.milestones.length}</small></div>
           <div class="ts">${f.milestonesLate.length} overdue</div></div>
         <div class="tile"><div class="tl">Pilots active</div>
-          <div class="tv">${activePilots().length}<small>/ ${D.pilots.length}</small></div>
-          <div class="ts">${D.pilots.filter(p => p.rag === 'R').length} red · ${D.pilots.filter(p => p.rag === 'A').length} amber</div></div>
+          <div class="tv">${activePilots().length}<small>/ ${livePilots().length}</small></div>
+          <div class="ts">${livePilots().filter(p => p.rag === 'R').length} red · ${livePilots().filter(p => p.rag === 'A').length} amber</div></div>
         <div class="tile"><div class="tl">Open risks</div>
           <div class="tv">${f.risksOpen.length}<small>${f.risksHigh.length ? ' · ' + f.risksHigh.length + ' high' : ''}</small></div>
           <div class="ts">${f.blocked.length} blocked activities</div></div>
@@ -4167,7 +4284,7 @@ function renderReport() {
     <div class="doc-sec"><h3>Pilot status</h3>
       <table><thead><tr><th>Pilot</th><th>Phase</th><th class="r">Complete</th>
         <th>RAG</th><th>Commentary</th></tr></thead>
-        <tbody>${D.pilots.map(p => {
+        <tbody>${livePilots().map(p => {
           const pr = pilotProgress(p.id);
           return `<tr${isActive(p) ? '' : ' style="opacity:.6"'}>
             <td><strong>${esc(p.short)}</strong>${isActive(p) ? '' : ' <span class="badge b-n">Not activated</span>'}
@@ -4186,7 +4303,7 @@ function renderReport() {
     </div>
 
     <div class="doc-sec"><h3>Timeline — by lifecycle phase</h3>
-      <p style="margin:0 0 9px">The same wave seen by lifecycle phase, with the share of each phase's activities complete across all ${D.pilots.length} pilots.</p>
+      <p style="margin:0 0 9px">The same wave seen by lifecycle phase, with the share of each phase's activities complete across all ${livePilots().length} pilots.</p>
       ${ganttHTML('phase', false)}
     </div>
 
@@ -4392,7 +4509,7 @@ function renderData() {
       </div></div>
 
       <div class="card"><header><h2>Lifecycle activity template</h2>
-        <span class="hint">${D.activityTemplate.length} activities × ${D.pilots.length} pilots = ${allWork().length} cards</span></header>
+        <span class="hint">${D.activityTemplate.length} activities × ${livePilots().length} pilots = ${allWork().length} cards</span></header>
         <div class="body tight" style="max-height:340px;overflow-y:auto">
           <table><thead><tr><th style="width:52px">ID</th><th>Activity</th><th style="width:66px">Weeks</th></tr></thead>
             <tbody>${D.activityTemplate.map(a => `<tr><td class="mono">${esc(a.id)}</td>
@@ -4506,7 +4623,7 @@ function paint() {
   $('#projTitle').textContent = D.meta.projectName.length > 52
     ? 'Wave 1 Command Center' : D.meta.projectName;
   $('#cnt-backlog').textContent = boardCards().filter(w => w.status !== 'done').length;
-  $('#cnt-pilots').textContent = D.pilots.length;
+  $('#cnt-pilots').textContent = livePilots().length;
   $('#cnt-risks').textContent = D.risks.filter(riskLive).length;
 
   ({ exec: renderExec, backlog: renderBacklog, timeline: renderTimeline, calendar: renderCalendar,
@@ -4579,12 +4696,12 @@ document.addEventListener('click', e => {
     const act = D.activityTemplate.find(a => a.id === t.dataset.delact);
     if (!act) return;
     if (!confirm(`Remove ${act.id} "${act.title}" from the plan?\n\n` +
-      `That is ${D.pilots.length} cards, one per pilot, and any status, owner or notes on them. This cannot be undone.`)) return;
+      `That is ${livePilots().length} cards, one per pilot, and any status, owner or notes on them. This cannot be undone.`)) return;
     D.activityTemplate = D.activityTemplate.filter(a => a.id !== act.id);
     Store.saveTemplate();
     for (const w of (D.work || []).filter(x => String(x.id).endsWith('-' + act.id))) Store.remove('work', w.id);
     D.work = (D.work || []).filter(x => !String(x.id).endsWith('-' + act.id));
-    logUpdate(`${act.id} removed from the plan`, act.title + ` — ${D.pilots.length} cards`, 'r', act.id);
+    logUpdate(`${act.id} removed from the plan`, act.title + ` — ${livePilots().length} cards`, 'r', act.id);
     closeDrawer(); paint(); return;
   }
   if (t.id === 'restoreCards') {
@@ -4615,7 +4732,7 @@ document.addEventListener('click', e => {
     closeDrawer(); paint(); return;
   }
   if (t.id === 'addWork') {
-    const p = F.pilot || (D.pilots[0] && D.pilots[0].id);
+    const p = F.pilot || (livePilots()[0] && livePilots()[0].id);
     const nid = 'X' + String(D.activityTemplate.length + 1).padStart(3, '0');
     const a = { id: nid, phase: F.phase || PHASES[0], title: 'New activity', role: '',
       startWk: currentWeek(), endWk: currentWeek(), output: '', gate: '' };
@@ -4655,6 +4772,8 @@ document.addEventListener('click', e => {
   if (t.dataset.laneToggle) { toggleLane(t.dataset.laneToggle); paint(); return; }
   if (t.id === 'addPilot') { addPilot(); return; }
   if (t.dataset.delpilot) { deletePilot(t.dataset.delpilot); return; }
+  if (t.dataset.cancelpilot) { cancelPilot(t.dataset.cancelpilot); return; }
+  if (t.dataset.restorepilot) { restorePilot(t.dataset.restorepilot); return; }
   if (t.dataset.rail) { railFilter = t.dataset.rail; paint(); return; }
   if (t.dataset.selpilot) { selPilot = t.dataset.selpilot; paint(); return; }
   if (t.dataset.openpilot) { openPilot(t.dataset.openpilot); return; }
