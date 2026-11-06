@@ -1476,10 +1476,18 @@ const Store = {
     const keys = Array.from(this.queue.keys());
     this.queue.clear();
     this.inflight = (async () => {
+      let refused = '';
       try {
         for (let i = 0; i < ops.length; i += 400) {
           const r = await fetch('/api/sync', { method: 'POST', headers: this.headers(),
             body: JSON.stringify({ ops: ops.slice(i, i + 400) }), keepalive: !!unloading });
+          // 403 is a rule, not a hiccup — an admin-only write from someone who
+          // is not one. Retrying would loop for ever, so stop and resync.
+          if (r.status === 403) {
+            try { refused = (await r.json()).error || ''; } catch (_) {}
+            refused = refused || 'the database refused that change';
+            break;
+          }
           if (!r.ok) throw new Error('HTTP ' + r.status);
         }
         this.setOnline(true);
@@ -1490,6 +1498,11 @@ const Store = {
         setTimeout(() => this.flush(), 5000);
         return;
       } finally { this.inflight = null; }
+      if (refused) {
+        flash('Not saved — ' + refused + '. Reloading so this page shows what the database holds.', 'warn');
+        setTimeout(() => location.reload(), 2600);
+        return;
+      }
       for (const k of keys) if (!this.queue.has(k)) this.pending.delete(k);
     })();
     await this.inflight;
@@ -2528,11 +2541,118 @@ let selPilot = null;
 let pilotTab = 'progress';
 let railFilter = 'all';   // which pilots the rail lists — all, active or stood down
 
+/* ── adding and removing a pilot ────────────────────────────────
+   Adding one is ordinary planning work, so anyone signed in can do
+   it: the board grows by one set of lifecycle activities and nothing
+   existing moves. Removing one destroys that set along with the
+   pilot's log, roster and checklist, so on the shared copy it is an
+   admin's call — /api/sync checks the same thing, since a hidden
+   button is not a control. A local copy has one person in it and
+   nothing to protect them from. */
+const isAdmin = () => Store.mode !== 'api' || !!(Auth.user && Auth.user.role === 'admin');
+
+/** One above the highest live id, rather than the first gap, so a new pilot
+    does not land on a number someone still has in a report or a screenshot.
+    Removal deletes everything keyed on the id, so nothing is inherited. */
+function nextPilotId() {
+  const n = (D.pilots || []).reduce((m, p) => Math.max(m, parseInt(String(p.id).slice(1), 10) || 0), 0);
+  return 'P' + String(n + 1).padStart(2, '0');
+}
+/** what a pilot has to prove before it closes — the wave's standard four */
+const PILOT_CRITERIA = () => [
+  { t: 'Lifecycle executed end to end on real demand', met: false },
+  { t: 'Gate 1 and Gate 2 decisions taken and logged', met: false },
+  { t: 'Jira board operating with required fields complete', met: false },
+  { t: 'Roles performed by Avangrid with reduced support', met: false },
+];
+function addPilot() {
+  const id = nextPilotId();
+  const p = {
+    id, name: 'New pilot', short: 'New', area: '', type: 'Representative',
+    valueStream: '', opco: '', jiraKey: '', platforms: '', director: '', areaManager: '',
+    champion: '', productMgr: '', deployWindow: '', projectName: '', jiraRef: '',
+    responsibleIT: '', swf: '', s4hana: '', rag: 'N', phase: PHASES[0],
+    startWeek: 1, endWeek: D.meta.weeks, summary: '', nextStep: '', blockers: '',
+    successCriteria: PILOT_CRITERIA(),
+  };
+  D.pilots.push(p); sortById(); Store.save('pilots', p);
+  logUpdate('Pilot added', `${id} — ${D.activityTemplate.length} lifecycle activities are now on its board`, 'b', id);
+  selPilot = id; pilotTab = 'team'; railFilter = 'all';
+  go('pilots');
+  flash(`${id} added. Give it a name and a short name — the board already carries its ${D.activityTemplate.length} activities.`);
+}
+
+/** everything that exists only because this pilot does */
+function pilotDependents(id) {
+  return {
+    work: (D.work || []).filter(w => String(w.id).startsWith(id + '-')),
+    checklist: (D.checklist || []).filter(c => c.pilot === id),
+    participants: (D.participants || []).filter(x => x.pilot === id),
+    trainees: (D.trainees || []).filter(x => x.pilot === id),
+    log: (D.pilotLogs || []).filter(l => l.id === id),
+    // these stand on their own and are kept, with the link cleared
+    risks: (D.risks || []).filter(r => r.pilot === id),
+    events: (D.events || []).filter(e => e.pilot === id),
+  };
+}
+function deletePilot(id) {
+  const p = D.pilots.find(x => x.id === id);
+  if (!p) return;
+  if (!isAdmin()) { flash('Only an admin can remove a pilot.', 'warn'); return; }
+  const dep = pilotDependents(id);
+  const meetings = dep.log.reduce((n, l) => n + (l.meetings || []).length + (l.results || []).length +
+    (l.learnings || []).length, 0);
+  const goes = [
+    `${D.activityTemplate.length} board cards` + (dep.work.length ? ` (${dep.work.length} with a status, owner or note on them)` : ''),
+    dep.checklist.length ? `${dep.checklist.length} checklist entr${dep.checklist.length === 1 ? 'y' : 'ies'}` : '',
+    dep.participants.length ? `${dep.participants.length} participant${dep.participants.length === 1 ? '' : 's'}` : '',
+    dep.trainees.length ? `${dep.trainees.length} training invitee${dep.trainees.length === 1 ? '' : 's'}` : '',
+    meetings ? `${meetings} meeting, result and learning record${meetings === 1 ? '' : 's'}` : '',
+  ].filter(Boolean);
+  const kept = [
+    dep.risks.length ? `${dep.risks.length} risk${dep.risks.length === 1 ? '' : 's'}` : '',
+    dep.events.length ? `${dep.events.length} calendar session${dep.events.length === 1 ? '' : 's'}` : '',
+  ].filter(Boolean);
+  if (!confirm(`Remove ${id} ${p.short} from the wave?\n\n` +
+    `This deletes:\n  · ${goes.join('\n  · ')}\n\n` +
+    (kept.length ? `Kept, with the link to ${id} cleared:\n  · ${kept.join('\n  · ')}\n\n` : '') +
+    'This cannot be undone. Export a backup from Data & setup first if you might want it back.')) return;
+
+  for (const w of dep.work) Store.remove('work', w.id);
+  D.work = (D.work || []).filter(w => !String(w.id).startsWith(id + '-'));
+  for (const c of dep.checklist) Store.remove('checklist', c.id);
+  D.checklist = (D.checklist || []).filter(c => c.pilot !== id);
+  for (const x of dep.participants) Store.remove('participants', x.id);
+  D.participants = (D.participants || []).filter(x => x.pilot !== id);
+  for (const x of dep.trainees) Store.remove('trainees', x.id);
+  D.trainees = (D.trainees || []).filter(x => x.pilot !== id);
+  for (const l of dep.log) Store.remove('pilotLogs', l.id);
+  D.pilotLogs = (D.pilotLogs || []).filter(l => l.id !== id);
+  // a risk and a session outlive the pilot that raised them
+  for (const r of dep.risks) { r.pilot = ''; Store.save('risks', r); }
+  for (const e of dep.events) { e.pilot = ''; Store.save('events', e); }
+
+  D.pilots = D.pilots.filter(x => x.id !== id);
+  Store.remove('pilots', id);
+  logUpdate(`Pilot ${id} ${p.short} removed from the wave`,
+    `${goes.join('; ')}${kept.length ? `. Kept: ${kept.join('; ')}` : ''}`, 'r', id);
+  if (selPilot === id) selPilot = D.pilots[0] ? D.pilots[0].id : null;
+  if (F.pilot === id) F.pilot = '';
+  closeDrawer(); paint();
+  flash(`${id} ${p.short} removed.`);
+}
+
 function renderPilots() {
   const el = $('#panel-pilots');
   if (!selPilot) selPilot = D.pilots[0] && D.pilots[0].id;
   const p = D.pilots.find(x => x.id === selPilot);
-  if (!p) { el.innerHTML = '<div class="card"><div class="empty"><strong>No pilots</strong>Add one in Data &amp; setup.</div></div>'; return; }
+  if (!p) {
+    el.innerHTML = `<div class="card"><div class="empty"><strong>No pilots in the wave</strong>
+      A pilot arrives with the full set of ${D.activityTemplate.length} lifecycle activities on its board.
+      <div style="margin-top:11px"><button class="btn primary" id="addPilot">＋ Add the first pilot</button></div>
+    </div></div>`;
+    return;
+  }
   const pr = pilotProgress(p.id);
   const log = pilotLog(p.id);
   const items = allWork().filter(w => w.pilot === p.id);
@@ -2567,7 +2687,8 @@ function renderPilots() {
   el.innerHTML = `<div style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;align-items:start">
     <div class="stack noprint">
       <div class="card railcard"><header><h3>Pilots</h3>
-          <span class="hint">${nOn} active${nOff ? ` · ${nOff} off` : ''}</span></header>
+          <span class="hint">${nOn} active${nOff ? ` · ${nOff} off` : ''}</span>
+          <button class="btn sm primary" id="addPilot" title="Adds a pilot with the full set of lifecycle activities">＋ Add</button></header>
         <div class="body tight" style="display:grid;gap:8px">
           <div class="seg railseg" style="width:100%">${[['all', 'All'], ['active', 'Active'], ['off', 'Off']].map(([k, l]) =>
             `<button type="button" data-rail="${k}" aria-pressed="${railFilter === k}" style="flex:1">${l}</button>`).join('')}</div>
@@ -2778,7 +2899,7 @@ function atAGlance(p, pr, blocked) {
 function pilotTeamPane(p) {
   const f = (k, l, ph) => `<div><span class="lbl">${l}</span>
     <input type="text" data-p="${p.id}" data-pf="${k}" value="${esc(p[k] || '')}" placeholder="${esc(ph || '')}"></div>`;
-  return `<div class="card"><header><h3>Team, scope and platforms</h3>
+  return `<div class="stack"><div class="card"><header><h3>Team, scope and platforms</h3>
       <span class="hint">edit any field</span></header>
     <div class="body"><div class="grid g2">
       ${f('name', 'Track name')}${f('short', 'Short name')}
@@ -2801,7 +2922,21 @@ function pilotTeamPane(p) {
     </div>
     <div style="margin-top:12px"><span class="lbl">Blockers and escalations</span>
       <textarea data-p="${p.id}" data-pf="blockers" placeholder="What needs a decision from outside the pilot team.">${esc(p.blockers)}</textarea></div>
-    </div></div>`;
+    </div></div>
+
+    ${isAdmin() ? `<div class="card"><header><h3>Remove this pilot</h3>
+        <span class="badge b-v">admin only</span></header><div class="body tight">
+        <p class="src" style="margin:0 0 9px">Deletes ${p.id}'s ${D.activityTemplate.length} board cards, its
+          checklist, participants, training invitees and meeting log. Risks and calendar sessions are kept, with
+          the link to ${p.id} cleared. To leave ${esc(p.short)} out of the wave figures without losing any of
+          that, switch it off at the top of this page instead.</p>
+        <button class="btn danger sm" data-delpilot="${p.id}">Remove ${p.id} ${esc(p.short)} from the wave</button>
+      </div></div>` : `<div class="card"><div class="body tight">
+        <p class="src" style="margin:0">Removing a pilot is restricted to an admin, because it deletes the
+          pilot's board, checklist and meeting log along with it. To leave ${esc(p.short)} out of the wave
+          figures without losing anything, switch it off at the top of this page.</p>
+      </div></div>`}
+    </div>`;
 }
 
 const LOGDEF = {
@@ -4517,6 +4652,8 @@ document.addEventListener('click', e => {
 
   /* — pilots — */
   if (t.dataset.laneToggle) { toggleLane(t.dataset.laneToggle); paint(); return; }
+  if (t.id === 'addPilot') { addPilot(); return; }
+  if (t.dataset.delpilot) { deletePilot(t.dataset.delpilot); return; }
   if (t.dataset.rail) { railFilter = t.dataset.rail; paint(); return; }
   if (t.dataset.selpilot) { selPilot = t.dataset.selpilot; paint(); return; }
   if (t.dataset.openpilot) { openPilot(t.dataset.openpilot); return; }

@@ -9,14 +9,14 @@
  * user (Bearer token from /api/auth).
  */
 import { db } from '../lib/db.js';
-import { requireUser } from '../lib/auth.js';
+import { requireUser, requireAdmin } from '../lib/auth.js';
 
 const MAX_OPS = 500;
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
-    await requireUser(req);
+    const user = await requireUser(req);
     const q = await db();
 
     if (req.method === 'GET') {
@@ -38,6 +38,9 @@ export default async function handler(req, res) {
         if (!/^[A-Za-z0-9_-]{1,64}$/.test(o.coll) || o.id.length > 128)
           return res.status(400).json({ error: 'bad coll or id' });
       }
+      // a pilot carries a tenth of the wave — its board, its log, its roster —
+      // so removing one is an admin's call, checked here and not only in the page
+      if (ops.some(o => o.delete && o.coll === 'pilots')) requireAdmin(user);
       // the counter update takes a row lock for the rest of the transaction,
       // so concurrent writers are numbered in the order they commit
       const stmts = [q`UPDATE sync_counter SET n = n + 1 WHERE k = 1`];
